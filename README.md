@@ -20,6 +20,7 @@ Open `http://monitor.local` in a browser and the page connects directly to the W
 
 - Raspberry Pi (arm64) with a USB or CSI camera and microphone
 - SSH access from your dev machine
+- [`just`](https://github.com/casey/just) — install with `brew install just`
 - Go 1.21+ (to build the HTTP server binary)
 - `rsync` and `scp` on your dev machine
 
@@ -43,7 +44,7 @@ PI_IP=192.168.1.100  # Pi's LAN IP (used for WebRTC ICE candidates)
 **2. Deploy and install**
 
 ```bash
-make install
+just install
 ```
 
 This builds the Go binary, syncs all files to the Pi (including a generated `mediamtx.yml`), downloads mediamtx, and registers the three systemd services.
@@ -51,25 +52,27 @@ This builds the Go binary, syncs all files to the Pi (including a generated `med
 **3. Start the monitor**
 
 ```bash
-make start
+just start
 ```
 
 Then open `http://<PI_HOST>` in your browser.
 
-## Makefile targets
+## Commands
 
-| Target | Description |
+Run `just --list` to see all available recipes.
+
+| Command | Description |
 |---|---|
-| `make build` | Cross-compile the Go HTTP server for linux/arm64 |
-| `make setup` | Generate `mediamtx.yml` from `mediamtx.yml.example` using `PI_IP` |
-| `make sync` | Sync project files to the Pi |
-| `make deploy` | Build + sync + install binary |
-| `make install` | Full install: sync files + download mediamtx + register services |
-| `make start` | Start all services on the Pi |
-| `make stop` | Stop all services on the Pi |
-| `make status` | Show systemd status for all services |
-| `make logs` | Tail the FFmpeg log |
-| `make logs-http` | Tail the HTTP server log |
+| `just build` | Cross-compile the Go HTTP server for linux/arm64 |
+| `just setup` | Generate `mediamtx.yml` from `mediamtx.yml.example` using `PI_IP` |
+| `just sync` | Sync project files to the Pi |
+| `just deploy` | Build + sync + install binary |
+| `just install` | Full install: sync files + download mediamtx + register services |
+| `just start` | Start all services on the Pi |
+| `just stop` | Stop all services on the Pi |
+| `just status` | Show systemd status for all services |
+| `just logs` | Tail the FFmpeg log |
+| `just logs-http` | Tail the HTTP server log |
 
 ## Hardware tested on
 
