@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>May Monitor</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👶</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f7f7f5;
+      color: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    h1 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin: 0 0 12px;
+    }
+
+    #container {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 4px;
+      object-fit: contain;
+      background: #000;
+    }
+
+    #controls {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: #111;
+      color: #f7f7f5;
+      border: none;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: #333; }
+
+    #overlay {
+      display: none;
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      gap: 8px;
+    }
+
+    #overlay button {
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    #overlay button:hover { background: rgba(0, 0, 0, 0.8); }
+
+    :fullscreen #overlay,
+    :-webkit-full-screen #overlay { display: flex; }
+
+    :fullscreen video,
+    :-webkit-full-screen video { width: 100%; height: 100%; object-fit: contain; }
+
+    :fullscreen #container,
+    :-webkit-full-screen #container {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <h1>May Monitor</h1>
+
+  <div id="container">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="overlay">
+      <button id="overlayMuteBtn" onclick="toggleMute()">🔇 Unmute</button>
+      <button onclick="exitFullscreen()">✕ Exit</button>
+    </div>
+  </div>
+
+  <div id="controls">
+    <button id="muteBtn" onclick="toggleMute()">🔇 Unmute</button>
+    <button id="fsBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const whepUrl = `http://${location.hostname}:8889/baby/whep`;
+
+    async function start() {
+      const pc = new RTCPeerConnection();
+
+      pc.ontrack = e => { video.srcObject = e.streams[0]; };
+
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      pc.addTransceiver('audio', { direction: 'recvonly' });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const res = await fetch(whepUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/sdp' },
+        body: offer.sdp,
+      });
+
+      if (!res.ok) {
+        document.body.insertAdjacentHTML('beforeend', `<p>Stream unavailable (${res.status})</p>`);
+        return;
+      }
+
+      const answer = await res.text();
+      await pc.setRemoteDescription({ type: 'answer', sdp: answer });
+    }
+
+    function toggleMute() {
+      video.muted = !video.muted;
+      const label = video.muted ? '🔇 Unmute' : '🔊 Mute';
+      document.getElementById('muteBtn').textContent = label;
+      document.getElementById('overlayMuteBtn').textContent = label;
+    }
+
+    function toggleFullscreen() {
+      const el = document.getElementById('container');
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+
+    function exitFullscreen() {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+
+    document.addEventListener('fullscreenchange', updateFsBtn);
+    document.addEventListener('webkitfullscreenchange', updateFsBtn);
+
+    function updateFsBtn() {
+      const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      document.getElementById('fsBtn').textContent = inFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+    }
+
+    start().catch(err => {
+      document.body.insertAdjacentHTML('beforeend', `<p>Error: ${err.message}</p>`);
+    });
+  </script>
+</body>
+</html>

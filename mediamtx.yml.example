@@ -1,0 +1,9 @@
+rtmp: no
+hls: no
+srt: no
+rtspAddress: :8554
+webrtcAddress: :8889
+webrtcAdditionalHosts: [YOUR_PI_IP]
+
+paths:
+  baby: {}
