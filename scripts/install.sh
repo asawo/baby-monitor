@@ -18,7 +18,8 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger --action=add --subsystem-match=video4linux
 
 echo "==> Installing Python dependencies for cry detection..."
-pip3 install --quiet -r "$INSTALL_DIR/requirements.txt"
+python3 -m venv "$INSTALL_DIR/venv"
+"$INSTALL_DIR/venv/bin/pip" install --quiet -r "$INSTALL_DIR/requirements.txt"
 
 echo "==> Downloading YAMNet cry detection model..."
 mkdir -p "$INSTALL_DIR/models"

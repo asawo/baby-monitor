@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-exec python3 "${HOME}/monitor/scripts/detect_cry.py"
+exec "${HOME}/monitor/venv/bin/python3" "${HOME}/monitor/scripts/detect_cry.py"
