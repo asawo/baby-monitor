@@ -5,6 +5,7 @@
   <title>May Monitor</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👶</text></svg>">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
 
@@ -52,21 +53,28 @@
       gap: 8px;
       width: 100%;
       justify-content: flex-end;
+      align-items: stretch;
+    }
+
+    #waveform {
+      flex: 1;
+      height: 40px;
+      background: #111;
+      border-radius: 4px;
+      display: block;
     }
 
     button {
-      padding: 10px 20px;
-      font-family: inherit;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+      padding: 8px;
       cursor: pointer;
       background: #111;
       color: #f7f7f5;
       border: none;
       border-radius: 4px;
       transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     button:hover { background: #333; }
@@ -107,24 +115,87 @@
   <div id="container">
     <video id="video" autoplay playsinline muted></video>
     <div id="overlay">
-      <button id="overlayMuteBtn" onclick="toggleMute()">🔇 Unmute</button>
-      <button onclick="exitFullscreen()">✕ Exit</button>
+      <button id="overlayMuteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
+      <button onclick="exitFullscreen()" aria-label="Exit fullscreen"><span class="material-icons">fullscreen_exit</span></button>
     </div>
   </div>
 
   <div id="controls">
-    <button id="muteBtn" onclick="toggleMute()">🔇 Unmute</button>
-    <button id="fsBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+    <canvas id="waveform"></canvas>
+    <button id="muteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
+    <button id="fsBtn" onclick="toggleFullscreen()" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
   </div>
 
   <script>
     const video = document.getElementById('video');
     const whepUrl = `http://${location.hostname}:8889/baby/whep`;
 
+    const canvas = document.getElementById('waveform');
+    const ctx = canvas.getContext('2d');
+    let analyser, waveBuffer, audioCtx, pendingAudioStream;
+    let history, histPos, lastTick;
+
+    function drawWaveform() {
+      requestAnimationFrame(drawWaveform);
+
+      const now = performance.now();
+      if (now - lastTick < 150) return; // scroll speed: 1px per 150ms
+      lastTick = now;
+
+      analyser.getByteTimeDomainData(waveBuffer);
+      let peak = 0;
+      for (let i = 0; i < waveBuffer.length; i++) {
+        peak = Math.max(peak, Math.abs(waveBuffer[i] - 128));
+      }
+      history[histPos++ % history.length] = peak / 128;
+
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.lineWidth = 1;
+
+      const colors = ['#4ade80', '#facc15', '#f87171'];
+      const paths = [new Path2D(), new Path2D(), new Path2D()];
+      for (let i = 0; i < w; i++) {
+        const val = history[(histPos + i) % w];
+        const amp = val * h * 2;
+        const tier = val < 0.2 ? 0 : val < 0.5 ? 1 : 2;
+        paths[tier].moveTo(i + 0.5, h / 2 - amp);
+        paths[tier].lineTo(i + 0.5, h / 2 + amp);
+      }
+      colors.forEach((color, i) => {
+        ctx.strokeStyle = color;
+        ctx.stroke(paths[i]);
+      });
+    }
+
+    function setupAnalyser(stream) {
+      audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0;
+      waveBuffer = new Uint8Array(analyser.frequencyBinCount);
+      source.connect(analyser);
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      history = new Float32Array(canvas.width).fill(0);
+      histPos = 0;
+      lastTick = 0;
+      drawWaveform();
+    }
+
+    document.addEventListener('click', () => {
+      if (pendingAudioStream && !audioCtx) setupAnalyser(pendingAudioStream);
+      else if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    });
+
     async function start() {
       const pc = new RTCPeerConnection();
 
-      pc.ontrack = e => { video.srcObject = e.streams[0]; };
+      pc.ontrack = e => {
+        if (e.track.kind === 'video') video.srcObject = e.streams[0];
+        if (e.track.kind === 'audio') pendingAudioStream = e.streams[0];
+      };
 
       pc.addTransceiver('video', { direction: 'recvonly' });
       pc.addTransceiver('audio', { direction: 'recvonly' });
@@ -149,9 +220,13 @@
 
     function toggleMute() {
       video.muted = !video.muted;
-      const label = video.muted ? '🔇 Unmute' : '🔊 Mute';
-      document.getElementById('muteBtn').textContent = label;
-      document.getElementById('overlayMuteBtn').textContent = label;
+      const icon = video.muted ? 'volume_off' : 'volume_up';
+      const label = video.muted ? 'Unmute' : 'Mute';
+      const html = `<span class="material-icons">${icon}</span>`;
+      document.getElementById('muteBtn').innerHTML = html;
+      document.getElementById('muteBtn').setAttribute('aria-label', label);
+      document.getElementById('overlayMuteBtn').innerHTML = html;
+      document.getElementById('overlayMuteBtn').setAttribute('aria-label', label);
     }
 
     function toggleFullscreen() {
@@ -170,7 +245,8 @@
 
     function updateFsBtn() {
       const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-      document.getElementById('fsBtn').textContent = inFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+      document.getElementById('fsBtn').innerHTML = `<span class="material-icons">${inFs ? 'fullscreen_exit' : 'fullscreen'}</span>`;
+      document.getElementById('fsBtn').setAttribute('aria-label', inFs ? 'Exit fullscreen' : 'Fullscreen');
       document.getElementById('overlay').classList.toggle('visible', inFs);
     }
 
