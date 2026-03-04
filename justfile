@@ -49,3 +49,7 @@ logs:
 # Tail the Go HTTP server log
 logs-http:
     ssh {{PI}} "tail -f {{REMOTE}}/monitor.log"
+
+# Tail the cry detection log
+logs-detect:
+    ssh {{PI}} "tail -f {{REMOTE}}/detect.log"

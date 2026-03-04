@@ -10,10 +10,14 @@ start() {
   systemctl start stream.service
   echo "Starting HTTP server..."
   systemctl start monitor-http.service
+  echo "Starting cry detection..."
+  systemctl start detect.service
   echo "Done."
 }
 
 stop() {
+  echo "Stopping cry detection..."
+  systemctl stop detect.service
   echo "Stopping HTTP server..."
   systemctl stop monitor-http.service
   echo "Stopping stream service..."
@@ -27,6 +31,7 @@ status() {
   systemctl status mediamtx --no-pager
   systemctl status stream.service --no-pager
   systemctl status monitor-http.service --no-pager
+  systemctl status detect.service --no-pager
 }
 
 case "$1" in

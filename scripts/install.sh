@@ -17,10 +17,20 @@ sudo cp "$INSTALL_DIR/scripts/udev/99-baby-monitor.rules" /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger --action=add --subsystem-match=video4linux
 
+echo "==> Installing Python dependencies for cry detection..."
+pip3 install --quiet -r "$INSTALL_DIR/requirements.txt"
+
+echo "==> Downloading YAMNet cry detection model..."
+mkdir -p "$INSTALL_DIR/models"
+wget -q -O "$INSTALL_DIR/models/yamnet.tflite" \
+  "https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/audio_classification/rpi/yamnet_float32.tflite"
+echo "    YAMNet model installed to $INSTALL_DIR/models/yamnet.tflite"
+
 echo "==> Installing systemd services..."
 bash "$INSTALL_DIR/scripts/install-services.sh"
 
 echo "==> Enabling services..."
-sudo systemctl enable mediamtx stream.service monitor-http.service
+sudo systemctl enable mediamtx stream.service monitor-http.service detect.service
 
 echo "Done. Reboot or run './scripts/monitor.sh start' to start the monitor."
+echo "NOTE: Edit .env and set NTFY_TOPIC before starting detect.service."
