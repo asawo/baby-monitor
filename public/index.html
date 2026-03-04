@@ -135,11 +135,18 @@
     let analyser, waveBuffer, audioCtx, pendingAudioStream;
     let history, histPos, lastTick;
 
+    // --- Tuning knobs ---
+    const SCROLL_MS = 150;      // ms per pixel scroll (higher = slower)
+    const SENSITIVITY = 4;      // visual amplification (higher = more reactive)
+    const YELLOW_THRESHOLD = 0.2; // fraction of max amplitude where green → yellow
+    const RED_THRESHOLD = 0.5;    // fraction of max amplitude where yellow → red
+    // --------------------
+
     function drawWaveform() {
       requestAnimationFrame(drawWaveform);
 
       const now = performance.now();
-      if (now - lastTick < 150) return; // scroll speed: 1px per 150ms
+      if (now - lastTick < SCROLL_MS) return;
       lastTick = now;
 
       analyser.getByteTimeDomainData(waveBuffer);
@@ -157,8 +164,8 @@
       const paths = [new Path2D(), new Path2D(), new Path2D()];
       for (let i = 0; i < w; i++) {
         const val = history[(histPos + i) % w];
-        const amp = val * h * 2;
-        const tier = val < 0.2 ? 0 : val < 0.5 ? 1 : 2;
+        const amp = val * h * SENSITIVITY;
+        const tier = val < YELLOW_THRESHOLD ? 0 : val < RED_THRESHOLD ? 1 : 2;
         paths[tier].moveTo(i + 0.5, h / 2 - amp);
         paths[tier].lineTo(i + 0.5, h / 2 + amp);
       }
