@@ -16,6 +16,13 @@ Three systemd services run on the Pi:
 
 Open `http://monitor.local` in a browser and the page connects directly to the WebRTC stream.
 
+### Device stability
+
+USB device paths (`/dev/videoN`, ALSA card numbers) can change across reboots depending on enumeration order. To prevent this:
+
+- **Video**: a udev rule (`scripts/udev/99-baby-monitor.rules`) matches the webcam by USB vendor/product ID and creates a stable symlink at `/dev/baby-cam`. The stream service is bound to this device unit, so systemd waits for the camera to appear before starting and stops the service if it's unplugged.
+- **Audio**: ALSA is addressed by card name (`hw:WEBCAM,0`) rather than card number, which is derived from the USB device descriptor and stays consistent regardless of enumeration order.
+
 ## Requirements
 
 - Raspberry Pi (arm64) with a USB or CSI camera and microphone
@@ -47,7 +54,7 @@ PI_IP=192.168.1.100  # Pi's LAN IP (used for WebRTC ICE candidates)
 just install
 ```
 
-This builds the Go binary, syncs all files to the Pi (including a generated `mediamtx.yml`), downloads mediamtx, and registers the three systemd services.
+This builds the Go binary, syncs all files to the Pi (including a generated `mediamtx.yml`), downloads mediamtx, installs the udev rules for stable device paths, and registers the three systemd services.
 
 **3. Start the monitor**
 
