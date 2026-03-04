@@ -87,8 +87,7 @@
 
     #overlay button:hover { background: rgba(0, 0, 0, 0.8); }
 
-    :fullscreen #overlay,
-    :-webkit-full-screen #overlay { display: flex; }
+    #overlay.visible { display: flex; }
 
     :fullscreen video,
     :-webkit-full-screen video { width: 100%; height: 100%; object-fit: contain; }
@@ -172,6 +171,7 @@
     function updateFsBtn() {
       const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
       document.getElementById('fsBtn').textContent = inFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+      document.getElementById('overlay').classList.toggle('visible', inFs);
     }
 
     start().catch(err => {
