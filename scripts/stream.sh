@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-VIDEO_DEV=/dev/video0
-AUDIO_DEV=hw:3,0
+VIDEO_DEV=/dev/baby-cam
+AUDIO_DEV=hw:WEBCAM,0
 AUDIO_RATE=48000
 
 exec arecord -D "$AUDIO_DEV" -f S16_LE -c1 -r "$AUDIO_RATE" --buffer-time=200000 | \

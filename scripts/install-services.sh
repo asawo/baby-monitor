@@ -20,7 +20,8 @@ UNIT
 sudo tee /etc/systemd/system/stream.service > /dev/null <<UNIT
 [Unit]
 Description=Baby Monitor Stream
-After=network.target sound.target mediamtx.service
+After=network.target sound.target mediamtx.service dev-baby\x2dcam.device
+BindsTo=dev-baby\x2dcam.device
 
 [Service]
 User=${INSTALL_USER}

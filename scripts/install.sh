@@ -12,6 +12,11 @@ rm /tmp/mediamtx.tar.gz
 chmod +x "$INSTALL_DIR/mediamtx"
 echo "    mediamtx installed to $INSTALL_DIR/mediamtx"
 
+echo "==> Installing udev rules..."
+sudo cp "$INSTALL_DIR/scripts/udev/99-baby-monitor.rules" /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger --action=add --subsystem-match=video4linux
+
 echo "==> Installing systemd services..."
 bash "$INSTALL_DIR/scripts/install-services.sh"
 
