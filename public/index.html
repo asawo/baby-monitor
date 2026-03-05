@@ -374,6 +374,8 @@
           case 'connected':
             clearTimeout(reconnectTimer);
             streamStatus = StreamStatus.CONNECTED;
+            statusBtn.className = 'ok';
+            statusLabel.textContent = 'live';
             pollStatus();
             break;
           case 'disconnected':
