@@ -23,12 +23,104 @@
       overflow: hidden;
     }
 
+    #header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
     h1 {
-      font-size: 0.75rem;
+      font-size: 1rem;
       font-weight: 600;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      margin: 0 0 12px;
+      margin: 0;
+    }
+
+    #status-btn {
+      width: auto;
+      height: 28px;
+      padding: 0 10px;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-family: inherit;
+      letter-spacing: 0.05em;
+      background: #ddd;
+      color: #111;
+    }
+
+    #status-btn:hover { background: #ccc; }
+
+    #status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #aaa;
+      flex-shrink: 0;
+    }
+
+    #status-btn.ok #status-dot { background: #4ade80; }
+    #status-btn.err #status-dot { background: #f87171; }
+
+    #log-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    #log-modal.open { display: flex; }
+
+    #log-card {
+      background: #111;
+      color: #f7f7f5;
+      border-radius: 6px;
+      padding: 14px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 75vh;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #log-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    #log-card-header span {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #888;
+    }
+
+    #log-card button {
+      background: transparent;
+      width: 28px;
+      height: 28px;
+    }
+
+    #log-card button:hover { background: #333; }
+
+    #log-content {
+      overflow-y: auto;
+      font-family: ui-monospace, 'SF Mono', monospace;
+      font-size: 0.7rem;
+      line-height: 1.5;
+      white-space: pre;
+      flex: 1;
+      min-height: 0;
+      color: #ccc;
     }
 
     #container {
@@ -79,6 +171,10 @@
 
     button:hover { background: #333; }
 
+    button { width: 40px; height: 40px; }
+
+    button .material-icons { font-size: 18px; }
+
     #overlay {
       display: none;
       position: absolute;
@@ -110,7 +206,23 @@
   </style>
 </head>
 <body>
-  <h1>May Monitor</h1>
+  <div id="header">
+    <h1>May Monitor</h1>
+    <button id="status-btn" onclick="openLogModal()" aria-label="Service status">
+      <span id="status-dot"></span>
+      <span id="status-label">checking</span>
+    </button>
+  </div>
+
+  <div id="log-modal" onclick="closeLogModal()">
+    <div id="log-card" onclick="event.stopPropagation()">
+      <div id="log-card-header">
+        <span>Service Logs</span>
+        <button onclick="closeLogModal()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <pre id="log-content">Loading…</pre>
+    </div>
+  </div>
 
   <div id="container">
     <video id="video" autoplay playsinline muted></video>
@@ -138,8 +250,8 @@
     // --- Tuning knobs ---
     const SCROLL_MS = 150;      // ms per pixel scroll (higher = slower)
     const SENSITIVITY = 4;      // visual amplification (higher = more reactive)
-    const YELLOW_THRESHOLD = 0.2; // fraction of max amplitude where green → yellow
-    const RED_THRESHOLD = 0.5;    // fraction of max amplitude where yellow → red
+    const YELLOW_THRESHOLD = 0.1; // fraction of max amplitude where green → yellow
+    const RED_THRESHOLD = 0.3;    // fraction of max amplitude where yellow → red
     // --------------------
 
     function drawWaveform() {
@@ -259,6 +371,52 @@
 
     start().catch(err => {
       document.body.insertAdjacentHTML('beforeend', `<p>Error: ${err.message}</p>`);
+    });
+
+    // --- Status widget ---
+    const statusBtn = document.getElementById('status-btn');
+    const statusLabel = document.getElementById('status-label');
+
+    async function pollStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const services = await res.json();
+        const down = services.filter(s => !s.active);
+        if (down.length === 0) {
+          statusBtn.className = 'ok';
+          statusLabel.textContent = 'live';
+        } else {
+          statusBtn.className = 'err';
+          statusLabel.textContent = down.map(s => s.name.replace('.service', '')).join(', ') + ' down';
+        }
+      } catch {
+        statusBtn.className = 'err';
+        statusLabel.textContent = 'unreachable';
+      }
+    }
+
+    pollStatus();
+    setInterval(pollStatus, 10_000);
+
+    async function openLogModal() {
+      document.getElementById('log-modal').classList.add('open');
+      const pre = document.getElementById('log-content');
+      pre.textContent = 'Loading…';
+      try {
+        const res = await fetch('/api/logs');
+        pre.textContent = await res.text();
+        pre.scrollTop = pre.scrollHeight;
+      } catch (e) {
+        pre.textContent = 'Failed to load logs: ' + e.message;
+      }
+    }
+
+    function closeLogModal() {
+      document.getElementById('log-modal').classList.remove('open');
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeLogModal();
     });
   </script>
 </body>
