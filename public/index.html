@@ -250,6 +250,7 @@
 
     function drawWaveform() {
       requestAnimationFrame(drawWaveform);
+      if (!analyser) return;
 
       const now = performance.now();
       if (now - lastTick < SCROLL_MS) return;
@@ -294,7 +295,6 @@
       history = new Float32Array(canvas.width).fill(0);
       histPos = 0;
       lastTick = 0;
-      drawWaveform();
     }
 
     new ResizeObserver(() => {
@@ -318,17 +318,75 @@
       }
     }).observe(canvas);
 
+    drawWaveform(); // start the loop once; guards on analyser being non-null
+
+    let wasAudioActive = false;
+
     document.addEventListener('click', () => {
-      if (pendingAudioStream && !audioCtx) setupAnalyser(pendingAudioStream);
-      else if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      if (pendingAudioStream && !audioCtx) {
+        wasAudioActive = true;
+        setupAnalyser(pendingAudioStream);
+      } else if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     });
 
+    const StreamStatus = Object.freeze({ UNKNOWN: 'unknown', CONNECTED: 'connected', RECONNECTING: 'reconnecting', FAILED: 'failed' });
+
+    let pc = null;
+    let reconnectTimer = null;
+    let streamStatus = StreamStatus.UNKNOWN;
+
+    function setStreamStatus(status) {
+      streamStatus = status;
+      switch (status) {
+        case StreamStatus.RECONNECTING:
+          statusBtn.className = 'err';
+          statusLabel.textContent = 'reconnecting\u2026';
+          break;
+        case StreamStatus.FAILED:
+          statusBtn.className = 'err';
+          statusLabel.textContent = 'stream failed';
+          break;
+        // CONNECTED is handled by pollStatus on its next tick
+      }
+    }
+
+    function reconnect() {
+      if (pc) { pc.close(); pc = null; }
+      video.srcObject = null;
+      if (audioCtx) { audioCtx.close(); audioCtx = null; analyser = null; pendingAudioStream = null; }
+      setStreamStatus(StreamStatus.RECONNECTING);
+      setTimeout(() => start().catch(() => reconnect()), 2000);
+    }
+
     async function start() {
-      const pc = new RTCPeerConnection();
+      pc = new RTCPeerConnection();
 
       pc.ontrack = e => {
         if (e.track.kind === 'video') video.srcObject = e.streams[0];
-        if (e.track.kind === 'audio') pendingAudioStream = e.streams[0];
+        if (e.track.kind === 'audio') {
+          pendingAudioStream = e.streams[0];
+          if (wasAudioActive) setupAnalyser(pendingAudioStream);
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        switch (pc.connectionState) {
+          case 'connected':
+            clearTimeout(reconnectTimer);
+            streamStatus = StreamStatus.CONNECTED;
+            pollStatus();
+            break;
+          case 'disconnected':
+            reconnectTimer = setTimeout(reconnect, 4000);
+            setStreamStatus(StreamStatus.RECONNECTING);
+            break;
+          case 'failed':
+          case 'closed':
+            clearTimeout(reconnectTimer);
+            setStreamStatus(StreamStatus.FAILED);
+            reconnect();
+            break;
+        }
       };
 
       pc.addTransceiver('video', { direction: 'recvonly' });
@@ -391,6 +449,8 @@
     const statusLabel = document.getElementById('status-label');
 
     async function pollStatus() {
+      // Don't overwrite a stream-level error with a server-health "live"
+      if (streamStatus === StreamStatus.RECONNECTING || streamStatus === StreamStatus.FAILED) return;
       try {
         const res = await fetch('/api/status');
         const services = await res.json();
