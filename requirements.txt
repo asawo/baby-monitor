@@ -1,2 +1,2 @@
 numpy
-tflite-runtime
+ai-edge-litert

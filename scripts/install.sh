@@ -4,13 +4,18 @@ set -e
 INSTALL_DIR="${HOME}/monitor"
 MEDIAMTX_VERSION=v1.16.3
 MEDIAMTX_URL="https://github.com/bluenviron/mediamtx/releases/download/${MEDIAMTX_VERSION}/mediamtx_${MEDIAMTX_VERSION}_linux_arm64.tar.gz"
+YAMNET_URL="https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/latest/yamnet.tflite"
 
-echo "==> Downloading mediamtx ${MEDIAMTX_VERSION}..."
-wget -O /tmp/mediamtx.tar.gz "$MEDIAMTX_URL"
-tar -xzf /tmp/mediamtx.tar.gz -C "$INSTALL_DIR" mediamtx
-rm /tmp/mediamtx.tar.gz
-chmod +x "$INSTALL_DIR/mediamtx"
-echo "    mediamtx installed to $INSTALL_DIR/mediamtx"
+if [ ! -f "$INSTALL_DIR/mediamtx" ]; then
+    echo "==> Downloading mediamtx ${MEDIAMTX_VERSION}..."
+    wget -O /tmp/mediamtx.tar.gz "$MEDIAMTX_URL"
+    tar -xzf /tmp/mediamtx.tar.gz -C "$INSTALL_DIR" mediamtx
+    rm /tmp/mediamtx.tar.gz
+    chmod +x "$INSTALL_DIR/mediamtx"
+    echo "    mediamtx installed to $INSTALL_DIR/mediamtx"
+else
+    echo "==> mediamtx already installed, skipping."
+fi
 
 echo "==> Installing udev rules..."
 sudo cp "$INSTALL_DIR/scripts/udev/99-baby-monitor.rules" /etc/udev/rules.d/
@@ -18,14 +23,17 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger --action=add --subsystem-match=video4linux
 
 echo "==> Installing Python dependencies for cry detection..."
-python3 -m venv "$INSTALL_DIR/venv"
+[ -d "$INSTALL_DIR/venv" ] || python3 -m venv "$INSTALL_DIR/venv"
 "$INSTALL_DIR/venv/bin/pip" install --quiet -r "$INSTALL_DIR/requirements.txt"
 
-echo "==> Downloading YAMNet cry detection model..."
-mkdir -p "$INSTALL_DIR/models"
-wget -q -O "$INSTALL_DIR/models/yamnet.tflite" \
-  "https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/audio_classification/rpi/yamnet_float32.tflite"
-echo "    YAMNet model installed to $INSTALL_DIR/models/yamnet.tflite"
+if [ ! -f "$INSTALL_DIR/models/yamnet.tflite" ]; then
+    echo "==> Downloading YAMNet cry detection model..."
+    mkdir -p "$INSTALL_DIR/models"
+    wget -q -O "$INSTALL_DIR/models/yamnet.tflite" "$YAMNET_URL"
+    echo "    YAMNet model installed to $INSTALL_DIR/models/yamnet.tflite"
+else
+    echo "==> YAMNet model already present, skipping."
+fi
 
 echo "==> Installing systemd services..."
 bash "$INSTALL_DIR/scripts/install-services.sh"

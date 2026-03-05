@@ -34,14 +34,9 @@ if not os.path.exists(MODEL_PATH):
     print("Download it first:\n  mkdir -p models && wget -O models/yamnet.tflite <url>")
     sys.exit(1)
 
-try:
-    import tflite_runtime.interpreter as tflite
-    print("Using tflite_runtime")
-except ImportError:
-    import tensorflow.lite as tflite
-    print("Using tensorflow.lite (tflite_runtime not installed)")
+from ai_edge_litert.interpreter import Interpreter
 
-interpreter = tflite.Interpreter(model_path=MODEL_PATH)
+interpreter = Interpreter(model_path=MODEL_PATH)
 interpreter.allocate_tensors()
 print("Model loaded OK")
 

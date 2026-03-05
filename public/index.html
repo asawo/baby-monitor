@@ -31,20 +31,6 @@
       margin: 0 0 12px;
     }
 
-    #status-btn {
-      width: auto;
-      height: 40px;
-      padding: 0 10px;
-      gap: 6px;
-      font-size: 0.72rem;
-      font-family: inherit;
-      letter-spacing: 0.05em;
-      background: #ddd;
-      color: #111;
-    }
-
-    #status-btn:hover { background: #ccc; }
-
     #status-dot {
       width: 7px;
       height: 7px;
@@ -114,10 +100,44 @@
       font-family: ui-monospace, 'SF Mono', monospace;
       font-size: 0.7rem;
       line-height: 1.5;
-      white-space: pre;
       flex: 1;
       min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .log-section-header {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .log-section-header .material-icons {
+      font-size: 14px;
+      color: #555;
+      transition: transform 0.15s;
+    }
+
+    .log-section.open .log-section-header .material-icons {
+      transform: rotate(90deg);
+    }
+
+    .log-section-body {
+      white-space: pre;
       color: #ccc;
+      display: none;
+    }
+
+    .log-section.open .log-section-body {
+      display: block;
     }
 
     #container {
@@ -201,6 +221,58 @@
 
     #overlay button:hover { background: rgba(0, 0, 0, 0.8); }
 
+    #cry-alert {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(239, 68, 68, 0.88);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 20px;
+      display: none;
+      white-space: nowrap;
+      pointer-events: none;
+      animation: cry-pulse 1.2s ease-in-out infinite;
+    }
+
+    #cry-alert.visible { display: block; }
+
+    @keyframes cry-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    #notify-btn, #status-btn {
+      background: #ddd;
+      color: #111;
+    }
+
+    #notify-btn:hover, #status-btn:hover { background: #ccc; }
+
+    #notify-btn.disabled {
+      opacity: 0.45;
+    }
+
+    #detect-error {
+      display: none;
+      font-size: 0.7rem;
+      color: #f87171;
+      width: 100%;
+      margin-top: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #detect-error.visible { display: block; }
+
   </style>
 </head>
 <body>
@@ -212,12 +284,13 @@
         <span>Service Logs</span>
         <button id="log-close-btn" onclick="closeLogModal()" aria-label="Close"><span class="material-icons">close</span></button>
       </div>
-      <pre id="log-content">Loading…</pre>
+      <div id="log-content"></div>
     </div>
   </div>
 
   <div id="container">
     <video id="video" autoplay playsinline muted></video>
+    <div id="cry-alert">Crying detected</div>
     <div id="overlay">
       <button id="overlayMuteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
       <button id="overlayFsBtn" onclick="toggleFullscreen()" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
@@ -226,11 +299,12 @@
 
   <div id="controls">
     <canvas id="waveform"></canvas>
+    <button id="notify-btn" onclick="toggleNotifications()" aria-label="Disable notifications"><span class="material-icons">notifications</span></button>
     <button id="status-btn" onclick="openLogModal()" aria-label="Service status">
       <span id="status-dot"></span>
-      <span id="status-label">checking</span>
     </button>
   </div>
+  <div id="detect-error"></div>
 
   <script>
     const video = document.getElementById('video');
@@ -339,12 +413,8 @@
       streamStatus = status;
       switch (status) {
         case StreamStatus.RECONNECTING:
-          statusBtn.className = 'err';
-          statusLabel.textContent = 'reconnecting\u2026';
-          break;
         case StreamStatus.FAILED:
           statusBtn.className = 'err';
-          statusLabel.textContent = 'stream failed';
           break;
         // CONNECTED is handled by pollStatus on its next tick
       }
@@ -375,7 +445,6 @@
             clearTimeout(reconnectTimer);
             streamStatus = StreamStatus.CONNECTED;
             statusBtn.className = 'ok';
-            statusLabel.textContent = 'live';
             pollStatus();
             break;
           case 'disconnected':
@@ -448,41 +517,61 @@
 
     // --- Status widget ---
     const statusBtn = document.getElementById('status-btn');
-    const statusLabel = document.getElementById('status-label');
 
     async function pollStatus() {
-      // Don't overwrite a stream-level error with a server-health "live"
+      // Don't overwrite a stream-level error with a server-health indicator
       if (streamStatus === StreamStatus.RECONNECTING || streamStatus === StreamStatus.FAILED) return;
       try {
         const res = await fetch('/api/status');
         const services = await res.json();
         const down = services.filter(s => !s.active);
-        if (down.length === 0) {
-          statusBtn.className = 'ok';
-          statusLabel.textContent = 'live';
-        } else {
-          statusBtn.className = 'err';
-          statusLabel.textContent = down.map(s => s.name.replace('.service', '')).join(', ') + ' down';
-        }
+        statusBtn.className = down.length === 0 ? 'ok' : 'err';
       } catch {
         statusBtn.className = 'err';
-        statusLabel.textContent = 'unreachable';
       }
     }
 
     pollStatus();
     setInterval(pollStatus, 10_000);
 
+    const LOG_SECTION_COLORS = {
+      'mediamtx':           '#60a5fa', // blue
+      'stream.service':     '#34d399', // green
+      'monitor-http.service': '#f472b6', // pink
+      'detect.service':     '#fb923c', // orange
+    };
+    const LOG_SECTION_COLOR_FALLBACK = '#aaa';
+
+    const LOG_MAX_LINES = 30;
+
     async function openLogModal() {
       document.getElementById('log-modal').classList.add('open');
-      const pre = document.getElementById('log-content');
-      pre.textContent = 'Loading…';
+      const container = document.getElementById('log-content');
+      container.innerHTML = '<span style="color:#888">Loading…</span>';
       try {
         const res = await fetch('/api/logs');
-        pre.textContent = await res.text();
-        pre.scrollTop = pre.scrollHeight;
+        const sections = await res.json();
+        container.innerHTML = '';
+        sections.forEach(s => {
+          const color = LOG_SECTION_COLORS[s.name] ?? LOG_SECTION_COLOR_FALLBACK;
+          const lines = s.content.trimEnd().split('\n');
+          const truncated = lines.slice(-LOG_MAX_LINES);
+          const label = s.name;
+          const div = document.createElement('div');
+          div.className = 'log-section';
+          div.innerHTML = `
+            <div class="log-section-header" style="color:${color}">
+              <span>${label}</span>
+              <span class="material-icons">chevron_right</span>
+            </div>
+            <div class="log-section-body">${truncated.join('\n').replace(/</g, '&lt;')}</div>`;
+          div.querySelector('.log-section-header').addEventListener('click', () => {
+            div.classList.toggle('open');
+          });
+          container.appendChild(div);
+        });
       } catch (e) {
-        pre.textContent = 'Failed to load logs: ' + e.message;
+        container.innerHTML = '<span style="color:#f87171">Failed to load logs: ' + e.message + '</span>';
       }
     }
 
@@ -493,6 +582,68 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeLogModal();
     });
+
+    // --- Notifications toggle ---
+    const notifyBtn = document.getElementById('notify-btn');
+
+    async function loadNotificationsState() {
+      try {
+        const res = await fetch('/api/notifications');
+        const data = await res.json();
+        updateNotifyBtn(data.enabled);
+      } catch {}
+    }
+
+    async function toggleNotifications() {
+      try {
+        const res = await fetch('/api/notifications', { method: 'POST' });
+        const data = await res.json();
+        updateNotifyBtn(data.enabled);
+      } catch {}
+    }
+
+    function updateNotifyBtn(enabled) {
+      notifyBtn.querySelector('.material-icons').textContent = enabled ? 'notifications' : 'notifications_off';
+      notifyBtn.setAttribute('aria-label', enabled ? 'Disable notifications' : 'Enable notifications');
+      notifyBtn.classList.toggle('disabled', !enabled);
+    }
+
+    loadNotificationsState();
+
+    // --- Cry detection indicator ---
+    const cryAlert = document.getElementById('cry-alert');
+    const CRY_RECENT_SECONDS = 10;
+
+    async function pollCry() {
+      try {
+        const res = await fetch('/api/cry');
+        const data = await res.json();
+        const recent = data.detected_at !== null && data.seconds_ago < CRY_RECENT_SECONDS;
+        cryAlert.classList.toggle('visible', recent);
+      } catch {}
+    }
+
+    pollCry();
+    setInterval(pollCry, 5000);
+
+    // --- Detector error indicator ---
+    const detectErrorEl = document.getElementById('detect-error');
+
+    async function pollDetectStatus() {
+      try {
+        const res = await fetch('/api/detect-status');
+        const data = await res.json();
+        if (data.error) {
+          detectErrorEl.textContent = 'Detector error: ' + data.error;
+          detectErrorEl.classList.add('visible');
+        } else {
+          detectErrorEl.classList.remove('visible');
+        }
+      } catch {}
+    }
+
+    pollDetectStatus();
+    setInterval(pollDetectStatus, 10_000);
   </script>
 </body>
 </html>
