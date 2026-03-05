@@ -16,6 +16,15 @@ Three systemd services run on the Pi:
 
 Open `http://monitor.local` in a browser and the page connects directly to the WebRTC stream.
 
+### Web UI
+
+The single-page UI (`public/index.html`) provides:
+
+- **Live video** — WebRTC stream at a fixed 16:9 aspect ratio
+- **Audio waveform** — scrolling amplitude visualiser with colour-coded levels (green → yellow → red); resizes with the window while preserving history
+- **Mute / fullscreen** — overlay buttons on the video
+- **Connectivity status** — live indicator in the controls bar that polls `/api/status` every 10 seconds; clicking it opens a log modal that fetches recent service logs from `/api/logs`
+
 ### Device stability
 
 USB device paths (`/dev/videoN`, ALSA card numbers) can change across reboots depending on enumeration order. To prevent this:

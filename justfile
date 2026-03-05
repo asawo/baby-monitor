@@ -21,10 +21,10 @@ build:
 sync: setup
     rsync -av --exclude bin/ --exclude mediamtx ./ {{PI}}:{{REMOTE}}/
 
-# Build binary, sync all files, then deploy the binary atomically
+# Build binary, sync all files, then deploy the binary atomically and restart HTTP service
 deploy: build sync
     scp bin/monitor {{PI}}:/tmp/monitor-new
-    ssh {{PI}} "mv /tmp/monitor-new {{REMOTE}}/monitor && chmod +x {{REMOTE}}/monitor"
+    ssh {{PI}} "mv /tmp/monitor-new {{REMOTE}}/monitor && chmod +x {{REMOTE}}/monitor && sudo systemctl restart monitor-http.service"
 
 # Full install: sync files, download mediamtx, register systemd services
 install: sync

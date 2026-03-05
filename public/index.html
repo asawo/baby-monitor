@@ -24,18 +24,107 @@
     }
 
     h1 {
-      font-size: 0.75rem;
+      font-size: 1rem;
       font-weight: 600;
       letter-spacing: 0.25em;
       text-transform: uppercase;
       margin: 0 0 12px;
     }
 
+    #status-btn {
+      width: auto;
+      height: 40px;
+      padding: 0 10px;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-family: inherit;
+      letter-spacing: 0.05em;
+      background: #ddd;
+      color: #111;
+    }
+
+    #status-btn:hover { background: #ccc; }
+
+    #status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #aaa;
+      flex-shrink: 0;
+    }
+
+    #status-btn.ok #status-dot { background: #4ade80; }
+    #status-btn.err #status-dot { background: #f87171; }
+
+    #log-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    #log-modal.open { display: flex; }
+
+    #log-card {
+      background: #111;
+      color: #f7f7f5;
+      border-radius: 6px;
+      padding: 14px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 75vh;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #log-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    #log-card-header > span {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #888;
+    }
+
+    #log-close-btn {
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      padding: 0;
+      line-height: 0;
+      width: auto;
+      height: auto;
+    }
+
+    #log-close-btn:hover { color: #f7f7f5; }
+
+    #log-content {
+      overflow-y: auto;
+      font-family: ui-monospace, 'SF Mono', monospace;
+      font-size: 0.7rem;
+      line-height: 1.5;
+      white-space: pre;
+      flex: 1;
+      min-height: 0;
+      color: #ccc;
+    }
+
     #container {
       position: relative;
       width: 100%;
-      flex: 1;
       min-height: 0;
+      aspect-ratio: 16 / 9;
     }
 
     video {
@@ -44,6 +133,18 @@
       display: block;
       border-radius: 4px;
       object-fit: contain;
+      background: #000;
+    }
+
+    :fullscreen video,
+    :-webkit-full-screen video { width: 100%; height: 100%; object-fit: contain; }
+
+    :fullscreen #container,
+    :-webkit-full-screen #container {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
       background: #000;
     }
 
@@ -58,8 +159,9 @@
 
     #waveform {
       flex: 1;
+      min-width: 0;
       height: 40px;
-      background: #111;
+      background: #ddd;
       border-radius: 4px;
       display: block;
     }
@@ -79,8 +181,12 @@
 
     button:hover { background: #333; }
 
+    button { width: 40px; height: 40px; }
+
+    button .material-icons { font-size: 18px; }
+
     #overlay {
-      display: none;
+      display: flex;
       position: absolute;
       bottom: 16px;
       right: 16px;
@@ -95,35 +201,35 @@
 
     #overlay button:hover { background: rgba(0, 0, 0, 0.8); }
 
-    #overlay.visible { display: flex; }
-
-    :fullscreen video,
-    :-webkit-full-screen video { width: 100%; height: 100%; object-fit: contain; }
-
-    :fullscreen #container,
-    :-webkit-full-screen #container {
-      width: 100%;
-      height: 100%;
-      max-width: none;
-      background: #000;
-    }
   </style>
 </head>
 <body>
   <h1>May Monitor</h1>
 
+  <div id="log-modal" onclick="closeLogModal()">
+    <div id="log-card" onclick="event.stopPropagation()">
+      <div id="log-card-header">
+        <span>Service Logs</span>
+        <button id="log-close-btn" onclick="closeLogModal()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <pre id="log-content">Loading…</pre>
+    </div>
+  </div>
+
   <div id="container">
     <video id="video" autoplay playsinline muted></video>
     <div id="overlay">
       <button id="overlayMuteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
-      <button onclick="exitFullscreen()" aria-label="Exit fullscreen"><span class="material-icons">fullscreen_exit</span></button>
+      <button id="overlayFsBtn" onclick="toggleFullscreen()" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
     </div>
   </div>
 
   <div id="controls">
     <canvas id="waveform"></canvas>
-    <button id="muteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
-    <button id="fsBtn" onclick="toggleFullscreen()" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
+    <button id="status-btn" onclick="openLogModal()" aria-label="Service status">
+      <span id="status-dot"></span>
+      <span id="status-label">checking</span>
+    </button>
   </div>
 
   <script>
@@ -138,8 +244,8 @@
     // --- Tuning knobs ---
     const SCROLL_MS = 150;      // ms per pixel scroll (higher = slower)
     const SENSITIVITY = 4;      // visual amplification (higher = more reactive)
-    const YELLOW_THRESHOLD = 0.2; // fraction of max amplitude where green → yellow
-    const RED_THRESHOLD = 0.5;    // fraction of max amplitude where yellow → red
+    const YELLOW_THRESHOLD = 0.1; // fraction of max amplitude where green → yellow
+    const RED_THRESHOLD = 0.3;    // fraction of max amplitude where yellow → red
     // --------------------
 
     function drawWaveform() {
@@ -191,6 +297,27 @@
       drawWaveform();
     }
 
+    new ResizeObserver(() => {
+      const newW = canvas.offsetWidth;
+      const newH = canvas.offsetHeight;
+      if (newW === canvas.width && newH === canvas.height) return;
+      canvas.width = newW;
+      canvas.height = newH;
+      if (history) {
+        const oldW = history.length;
+        const newHistory = new Float32Array(newW).fill(0);
+        if (newW >= oldW) {
+          for (let i = 0; i < oldW; i++)
+            newHistory[newW - oldW + i] = history[(histPos + i) % oldW];
+        } else {
+          for (let i = 0; i < newW; i++)
+            newHistory[i] = history[(histPos + oldW - newW + i) % oldW];
+        }
+        history = newHistory;
+        histPos = 0;
+      }
+    }).observe(canvas);
+
     document.addEventListener('click', () => {
       if (pendingAudioStream && !audioCtx) setupAnalyser(pendingAudioStream);
       else if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
@@ -229,22 +356,20 @@
       video.muted = !video.muted;
       const icon = video.muted ? 'volume_off' : 'volume_up';
       const label = video.muted ? 'Unmute' : 'Mute';
-      const html = `<span class="material-icons">${icon}</span>`;
-      document.getElementById('muteBtn').innerHTML = html;
-      document.getElementById('muteBtn').setAttribute('aria-label', label);
-      document.getElementById('overlayMuteBtn').innerHTML = html;
-      document.getElementById('overlayMuteBtn').setAttribute('aria-label', label);
+      const btn = document.getElementById('overlayMuteBtn');
+      btn.innerHTML = `<span class="material-icons">${icon}</span>`;
+      btn.setAttribute('aria-label', label);
     }
 
     function toggleFullscreen() {
-      const el = document.getElementById('container');
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    }
-
-    function exitFullscreen() {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } else {
+        const el = document.getElementById('container');
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      }
     }
 
     document.addEventListener('fullscreenchange', updateFsBtn);
@@ -252,13 +377,59 @@
 
     function updateFsBtn() {
       const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-      document.getElementById('fsBtn').innerHTML = `<span class="material-icons">${inFs ? 'fullscreen_exit' : 'fullscreen'}</span>`;
-      document.getElementById('fsBtn').setAttribute('aria-label', inFs ? 'Exit fullscreen' : 'Fullscreen');
-      document.getElementById('overlay').classList.toggle('visible', inFs);
+      const btn = document.getElementById('overlayFsBtn');
+      btn.innerHTML = `<span class="material-icons">${inFs ? 'fullscreen_exit' : 'fullscreen'}</span>`;
+      btn.setAttribute('aria-label', inFs ? 'Exit fullscreen' : 'Fullscreen');
     }
 
     start().catch(err => {
       document.body.insertAdjacentHTML('beforeend', `<p>Error: ${err.message}</p>`);
+    });
+
+    // --- Status widget ---
+    const statusBtn = document.getElementById('status-btn');
+    const statusLabel = document.getElementById('status-label');
+
+    async function pollStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const services = await res.json();
+        const down = services.filter(s => !s.active);
+        if (down.length === 0) {
+          statusBtn.className = 'ok';
+          statusLabel.textContent = 'live';
+        } else {
+          statusBtn.className = 'err';
+          statusLabel.textContent = down.map(s => s.name.replace('.service', '')).join(', ') + ' down';
+        }
+      } catch {
+        statusBtn.className = 'err';
+        statusLabel.textContent = 'unreachable';
+      }
+    }
+
+    pollStatus();
+    setInterval(pollStatus, 10_000);
+
+    async function openLogModal() {
+      document.getElementById('log-modal').classList.add('open');
+      const pre = document.getElementById('log-content');
+      pre.textContent = 'Loading…';
+      try {
+        const res = await fetch('/api/logs');
+        pre.textContent = await res.text();
+        pre.scrollTop = pre.scrollHeight;
+      } catch (e) {
+        pre.textContent = 'Failed to load logs: ' + e.message;
+      }
+    }
+
+    function closeLogModal() {
+      document.getElementById('log-modal').classList.remove('open');
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeLogModal();
     });
   </script>
 </body>
