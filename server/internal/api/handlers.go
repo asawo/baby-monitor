@@ -17,11 +17,12 @@ var services = []string{"mediamtx", "stream.service", "monitor-http.service", "d
 // logFiles maps service names to their log file paths (relative to home dir).
 // Services not listed here log to journald instead.
 var logFiles = map[string]string{
-	"stream.service":       "monitor/ffmpeg.log",
-	"monitor-http.service": "monitor/monitor.log",
-	"detect.service":       "monitor/detect.log",
+	"stream.service":       "monitor/logs/ffmpeg.log",
+	"monitor-http.service": "monitor/logs/monitor.log",
+	"detect.service":       "monitor/logs/detect.log",
 }
 
+// StatusHandler returns the systemd active state of each monitored service.
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	result := make([]ServiceStatus, len(services))
 	for i, svc := range services {
@@ -32,6 +33,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(result)
 }
 
+// LogsHandler returns the last 50 lines of each service log (file or journald).
 func LogsHandler(w http.ResponseWriter, r *http.Request) {
 	home, _ := os.UserHomeDir()
 	result := make([]ServiceLog, 0, len(services))
@@ -61,6 +63,7 @@ func LogsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(result)
 }
 
+// NotificationsHandler returns the current notification state (GET) or toggles it (POST).
 func NotificationsHandler(w http.ResponseWriter, r *http.Request) {
 	var enabled bool
 	if r.Method == http.MethodPost {
@@ -72,6 +75,7 @@ func NotificationsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(NotificationsResponse{Enabled: enabled})
 }
 
+// CryHandler returns the most recent cry detection event (GET) or records a new one (POST).
 func CryHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var req CryRequest
@@ -98,6 +102,7 @@ func CryHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// DetectStatusHandler returns the current detector error state (GET) or updates it (POST).
 func DetectStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var req DetectStatusRequest

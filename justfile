@@ -49,15 +49,15 @@ status:
 
 # Tail the FFmpeg stream log
 logs:
-    ssh {{PI}} "tail -f {{REMOTE}}/ffmpeg.log"
+    ssh {{PI}} "tail -f {{REMOTE}}/logs/ffmpeg.log"
 
 # Tail the Go HTTP server log
 logs-http:
-    ssh {{PI}} "tail -f {{REMOTE}}/monitor.log"
+    ssh {{PI}} "tail -f {{REMOTE}}/logs/monitor.log"
 
 # Tail the cry detection log
 logs-detect:
-    ssh {{PI}} "tail -f {{REMOTE}}/detect.log"
+    ssh {{PI}} "tail -f {{REMOTE}}/logs/detect.log"
 
 # Run cry detection unit tests on the Pi
 test:

@@ -1,5 +1,7 @@
 INSTALL_USER="${USER}"
 INSTALL_DIR="${HOME}/monitor"
+LOG_DIR="${INSTALL_DIR}/logs"
+mkdir -p "$LOG_DIR"
 
 sudo tee /etc/systemd/system/mediamtx.service > /dev/null <<UNIT
 [Unit]
@@ -30,8 +32,8 @@ WorkingDirectory=${INSTALL_DIR}
 ExecStart=${INSTALL_DIR}/services/stream/stream.sh
 Restart=always
 RestartSec=3
-StandardOutput=append:${INSTALL_DIR}/ffmpeg.log
-StandardError=append:${INSTALL_DIR}/ffmpeg.log
+StandardOutput=append:${LOG_DIR}/ffmpeg.log
+StandardError=append:${LOG_DIR}/ffmpeg.log
 
 [Install]
 WantedBy=multi-user.target
@@ -50,8 +52,8 @@ ExecStartPre=/bin/sh -c 'fuser -k 80/tcp 2>/dev/null || true'
 ExecStart=${INSTALL_DIR}/monitor
 Restart=always
 RestartSec=3
-StandardOutput=append:${INSTALL_DIR}/monitor.log
-StandardError=append:${INSTALL_DIR}/monitor.log
+StandardOutput=append:${LOG_DIR}/monitor.log
+StandardError=append:${LOG_DIR}/monitor.log
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
@@ -71,8 +73,8 @@ EnvironmentFile=${INSTALL_DIR}/.env
 ExecStart=${INSTALL_DIR}/services/detect/detect.sh
 Restart=always
 RestartSec=5
-StandardOutput=append:${INSTALL_DIR}/detect.log
-StandardError=append:${INSTALL_DIR}/detect.log
+StandardOutput=append:${LOG_DIR}/detect.log
+StandardError=append:${LOG_DIR}/detect.log
 
 [Install]
 WantedBy=multi-user.target
