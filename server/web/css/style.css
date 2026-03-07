@@ -271,6 +271,22 @@ button .material-icons { font-size: 18px; }
 
 #overlay button:hover { background: rgba(0, 0, 0, 0.8); }
 
+#stream-error {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+#stream-error.visible { display: flex; }
+
 #cry-alert {
   position: absolute;
   top: 10px;

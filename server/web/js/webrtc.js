@@ -32,6 +32,7 @@ export async function start() {
         clearTimeout(reconnectTimer);
         setStreamStatus(StreamStatus.CONNECTED);
         pollStatus();
+        { const err = document.getElementById('stream-error'); if (err) err.classList.remove('visible'); }
         break;
       case 'disconnected':
         reconnectTimer = setTimeout(reconnect, 4000);
@@ -59,7 +60,8 @@ export async function start() {
   });
 
   if (!res.ok) {
-    document.body.insertAdjacentHTML('beforeend', `<p>Stream unavailable (${res.status})</p>`);
+    const err = document.getElementById('stream-error');
+    if (err) { err.textContent = `Stream not available (${res.status})`; err.classList.add('visible'); }
     return;
   }
 

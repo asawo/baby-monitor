@@ -26,6 +26,7 @@ initNotifications();
 initDetection();
 
 // not just init, as this is re-invoked on each reconnect
-start().catch(err => { 
-  document.body.insertAdjacentHTML('beforeend', `<p>Error: ${err.message}</p>`);
+start().catch(err => {
+  const streamErr = document.getElementById('stream-error');
+  if (streamErr) { streamErr.textContent = `Stream not available: ${err.message}`; streamErr.classList.add('visible'); }
 });
