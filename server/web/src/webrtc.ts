@@ -1,20 +1,21 @@
 import { setupAudio, resetAudio } from './waveform.js';
 import { StreamStatus, setStreamStatus, pollStatus } from './status.js';
 
-const video = /** @type {HTMLVideoElement} */ (document.getElementById('video'));
+const video = document.getElementById('video') as HTMLVideoElement;
 const whepUrl = `http://${location.hostname}:8889/baby/whep`;
 
-/** @type {RTCPeerConnection | null} */
-let pc = null;
-/** @type {number | undefined} */
-let reconnectTimer = undefined;
+const RECONNECT_DELAY_MS = 2000;      // delay before retrying after a close
+const DISCONNECT_TIMEOUT_MS = 4000;   // grace period before treating disconnect as failure
+
+let pc: RTCPeerConnection | null = null;
+let reconnectTimer: number | undefined = undefined;
 
 export function reconnect() {
   if (pc) { pc.close(); pc = null; }
   video.srcObject = null;
   resetAudio();
   setStreamStatus(StreamStatus.RECONNECTING);
-  setTimeout(() => start().catch(() => reconnect()), 2000);
+  setTimeout(() => start().catch(() => reconnect()), RECONNECT_DELAY_MS);
 }
 
 export async function start() {
@@ -35,7 +36,7 @@ export async function start() {
         { const err = document.getElementById('stream-error'); if (err) err.classList.remove('visible'); }
         break;
       case 'disconnected':
-        reconnectTimer = setTimeout(reconnect, 4000);
+        reconnectTimer = setTimeout(reconnect, DISCONNECT_TIMEOUT_MS);
         setStreamStatus(StreamStatus.RECONNECTING);
         break;
       case 'failed':

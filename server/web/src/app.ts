@@ -6,8 +6,7 @@ import { toggleMute, toggleFullscreen } from './controls.js';
 import { openLogModal, closeLogModal } from './logs.js';
 import { start } from './webrtc.js';
 
-/** @param {string} id @returns {HTMLElement} */
-const el = id => /** @type {HTMLElement} */ (document.getElementById(id));
+const el = (id: string): HTMLElement => document.getElementById(id) as HTMLElement;
 
 // Wire up UI event listeners
 el('overlayMuteBtn').addEventListener('click', toggleMute);
@@ -28,5 +27,5 @@ initDetection();
 // not just init, as this is re-invoked on each reconnect
 start().catch(err => {
   const streamErr = document.getElementById('stream-error');
-  if (streamErr) { streamErr.textContent = `Stream not available: ${err.message}`; streamErr.classList.add('visible'); }
+  if (streamErr) { streamErr.textContent = `Stream not available: ${(err as Error).message}`; streamErr.classList.add('visible'); }
 });

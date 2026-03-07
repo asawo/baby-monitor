@@ -1,25 +1,24 @@
+import type { ServiceStatus } from './api_types.js';
+
 export const StreamStatus = Object.freeze({
   UNKNOWN: 'unknown',
   CONNECTED: 'connected',
   RECONNECTING: 'reconnecting',
   FAILED: 'failed',
-});
+} as const);
 
-/** @import { ServiceStatus } from './api_types' */
+export type StreamStatusValue = typeof StreamStatus[keyof typeof StreamStatus];
 
-/** @type {string} */
-let streamStatus = StreamStatus.UNKNOWN;
-const statusBtn = /** @type {HTMLElement} */ (document.getElementById('status-btn'));
+let streamStatus: StreamStatusValue = StreamStatus.UNKNOWN;
+const statusBtn = document.getElementById('status-btn') as HTMLElement;
 
-export function getStreamStatus() { return streamStatus; }
+export function getStreamStatus(): StreamStatusValue { return streamStatus; }
 
-/** @param {string} text */
-export function updateStatusLabel(text) {
-  /** @type {HTMLElement} */ (document.getElementById('status-label')).textContent = text;
+export function updateStatusLabel(text: string) {
+  (document.getElementById('status-label') as HTMLElement).textContent = text;
 }
 
-/** @param {string} status */
-export function setStreamStatus(status) {
+export function setStreamStatus(status: StreamStatusValue) {
   streamStatus = status;
   switch (status) {
     case StreamStatus.RECONNECTING:
@@ -42,8 +41,7 @@ export async function pollStatus() {
   if (streamStatus === StreamStatus.RECONNECTING || streamStatus === StreamStatus.FAILED) return;
   try {
     const res = await fetch('/api/status');
-    /** @type {ServiceStatus[]} */
-    const services = await res.json();
+    const services: ServiceStatus[] = await res.json();
     const down = services.filter(s => !s.active);
     statusBtn.className = down.length === 0 ? 'ok' : 'err';
     updateStatusLabel(down.length === 0 ? 'Connected' : 'Issue');

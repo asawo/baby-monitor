@@ -1,5 +1,5 @@
-const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('waveform'));
-const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+const canvas = document.getElementById('waveform') as HTMLCanvasElement;
+const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 // --- Tuning knobs ---
 const SCROLL_MS = 300;        // ms per bar scroll (higher = slower)
@@ -8,18 +8,17 @@ const YELLOW_THRESHOLD = 0.1; // fraction of max amplitude where green → yello
 const RED_THRESHOLD = 0.3;    // fraction of max amplitude where yellow → red
 const BAR_W = 3;              // bar width in px
 const BAR_GAP = 1;            // gap between bars in px
+const FFT_SIZE = 256;         // analyser FFT size (must be power of 2)
+const COLOR_LOW = '#4ade80';  // green  — below YELLOW_THRESHOLD
+const COLOR_MID = '#facc15';  // yellow — between thresholds
+const COLOR_HIGH = '#f87171'; // red    — above RED_THRESHOLD
 // --------------------
 
-/** @type {AnalyserNode | null} */
-let analyser = null;
-/** @type {Uint8Array<ArrayBuffer> | null} */
-let waveBuffer = null;
-/** @type {AudioContext | null} */
-let audioCtx = null;
-/** @type {MediaStream | null} */
-let pendingAudioStream = null;
-/** @type {Float32Array | null} */
-let history = null;
+let analyser: AnalyserNode | null = null;
+let waveBuffer: Uint8Array<ArrayBuffer> | null = null;
+let audioCtx: AudioContext | null = null;
+let pendingAudioStream: MediaStream | null = null;
+let history: Float32Array | null = null;
 let histPos = 0, lastTick = 0;
 let wasAudioActive = false;
 
@@ -45,23 +44,19 @@ function drawWaveform() {
 
   const step = BAR_W + BAR_GAP;
   const n = history.length;
-  const colors = ['#4ade80', '#facc15', '#f87171'];
-
   for (let i = 0; i < n; i++) {
     const val = history[(histPos + i) % n];
     const barH = val * h * SENSITIVITY;
-    const tier = val < YELLOW_THRESHOLD ? 0 : val < RED_THRESHOLD ? 1 : 2;
-    ctx.fillStyle = colors[tier];
+    ctx.fillStyle = val < YELLOW_THRESHOLD ? COLOR_LOW : val < RED_THRESHOLD ? COLOR_MID : COLOR_HIGH;
     ctx.fillRect(i * step, h - barH, BAR_W, barH);
   }
 }
 
-/** @param {MediaStream} stream */
-function setupAnalyser(stream) {
+function setupAnalyser(stream: MediaStream) {
   audioCtx = new AudioContext();
   const source = audioCtx.createMediaStreamSource(stream);
   analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 256;
+  analyser.fftSize = FFT_SIZE;
   analyser.smoothingTimeConstant = 0;
   waveBuffer = new Uint8Array(analyser.frequencyBinCount);
   source.connect(analyser);
@@ -105,8 +100,7 @@ export function init() {
   });
 }
 
-/** @param {MediaStream} stream */
-export function setupAudio(stream) {
+export function setupAudio(stream: MediaStream) {
   pendingAudioStream = stream;
   if (wasAudioActive) setupAnalyser(stream);
 }

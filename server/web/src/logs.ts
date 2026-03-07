@@ -1,6 +1,6 @@
-/** @import { ServiceLog } from './api_types' */
+import type { ServiceLog } from './api_types.js';
 
-const LOG_SECTION_COLORS = {
+const LOG_SECTION_COLORS: Record<string, string> = {
   'mediamtx':             '#60a5fa', // blue
   'stream.service':       '#34d399', // green
   'monitor-http.service': '#f472b6', // pink
@@ -10,16 +10,15 @@ const LOG_SECTION_COLOR_FALLBACK = '#aaa';
 const LOG_MAX_LINES = 30;
 
 export async function openLogModal() {
-  /** @type {HTMLElement} */ (document.getElementById('log-modal')).classList.add('open');
-  const container = /** @type {HTMLElement} */ (document.getElementById('log-content'));
+  (document.getElementById('log-modal') as HTMLElement).classList.add('open');
+  const container = document.getElementById('log-content') as HTMLElement;
   container.innerHTML = '<span style="color:#888">Loading…</span>';
   try {
     const res = await fetch('/api/logs');
-    /** @type {ServiceLog[]} */
-    const sections = await res.json();
+    const sections: ServiceLog[] = await res.json();
     container.innerHTML = '';
     sections.forEach(s => {
-      const color = LOG_SECTION_COLORS[/** @type {keyof typeof LOG_SECTION_COLORS} */ (s.name)] ?? LOG_SECTION_COLOR_FALLBACK;
+      const color = LOG_SECTION_COLORS[s.name] ?? LOG_SECTION_COLOR_FALLBACK;
       const lines = s.content.trimEnd().split('\n');
       const truncated = lines.slice(-LOG_MAX_LINES);
       const div = document.createElement('div');
@@ -30,7 +29,7 @@ export async function openLogModal() {
           <span class="material-icons">chevron_right</span>
         </div>
         <div class="log-section-body">${truncated.join('\n').replace(/</g, '&lt;')}</div>`;
-      /** @type {HTMLElement} */ (div.querySelector('.log-section-header')).addEventListener('click', () => {
+      (div.querySelector('.log-section-header') as HTMLElement).addEventListener('click', () => {
         div.classList.toggle('open');
       });
       container.appendChild(div);
@@ -41,7 +40,7 @@ export async function openLogModal() {
 }
 
 export function closeLogModal() {
-  /** @type {HTMLElement} */ (document.getElementById('log-modal')).classList.remove('open');
+  (document.getElementById('log-modal') as HTMLElement).classList.remove('open');
 }
 
 document.addEventListener('keydown', e => {
