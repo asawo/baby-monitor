@@ -33,7 +33,7 @@ THRESHOLD = float(os.environ.get("CRY_THRESHOLD", "0.3"))
 COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", "120"))
 RTSP_URL = os.environ.get("RTSP_URL", "rtsp://localhost:8554/baby")
 
-_default_model = os.path.join(os.path.dirname(__file__), "..", "models", "yamnet.tflite")
+_default_model = os.path.join(os.path.dirname(__file__), "..", "..", "models", "yamnet.tflite")
 MODEL_PATH = os.path.abspath(os.environ.get("MODEL_PATH", _default_model))
 
 # YAMNet expects 16kHz mono; window is exactly 0.975s = 15600 samples

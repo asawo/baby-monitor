@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>May Monitor</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👶</text></svg>">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="app">
+  <div id="log-modal" onclick="closeLogModal()">
+    <div id="log-card" onclick="event.stopPropagation()">
+      <div id="log-card-header">
+        <span>Service Logs</span>
+        <button id="log-close-btn" onclick="closeLogModal()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div id="log-content"></div>
+    </div>
+  </div>
+
+  <div id="header">
+    <h1>May Monitor</h1>
+    <button id="status-btn" onclick="openLogModal()" aria-label="Service status">
+      <span id="status-dot"></span>
+      <span id="status-label">—</span>
+    </button>
+  </div>
+
+  <div id="monitor-panel">
+    <div id="container">
+      <video id="video" autoplay playsinline muted></video>
+      <div id="cry-alert">Crying detected</div>
+      <div id="overlay">
+        <button id="overlayMuteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
+        <button id="overlayFsBtn" onclick="toggleFullscreen()" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
+      </div>
+    </div>
+    <div id="audio-section">
+      <span id="audio-label">Audio Activity</span>
+      <canvas id="waveform"></canvas>
+    </div>
+  </div>
+
+  <div id="action-bar">
+    <button id="notify-btn" onclick="toggleNotifications()" aria-label="Disable notifications">
+      <span class="material-icons">notifications</span>
+      <span>Notifications</span>
+    </button>
+    <button id="log-btn" onclick="openLogModal()" aria-label="Service logs">
+      <span class="material-icons">list</span>
+      <span>Logs</span>
+    </button>
+  </div>
+  <div id="detect-error"></div>
+  </div>
+
+  <script src="/js/app.js" defer></script>
+</body>
+</html>

@@ -18,13 +18,13 @@ else
 fi
 
 echo "==> Installing udev rules..."
-sudo cp "$INSTALL_DIR/scripts/udev/99-baby-monitor.rules" /etc/udev/rules.d/
+sudo cp "$INSTALL_DIR/services/infra/udev/99-baby-monitor.rules" /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger --action=add --subsystem-match=video4linux
 
 echo "==> Installing Python dependencies for cry detection..."
 [ -d "$INSTALL_DIR/venv" ] || python3 -m venv "$INSTALL_DIR/venv"
-"$INSTALL_DIR/venv/bin/pip" install --quiet -r "$INSTALL_DIR/requirements.txt"
+"$INSTALL_DIR/venv/bin/pip" install --quiet -r "$INSTALL_DIR/services/detect/requirements.txt"
 
 if [ ! -f "$INSTALL_DIR/models/yamnet.tflite" ]; then
     echo "==> Downloading YAMNet cry detection model..."
@@ -36,10 +36,10 @@ else
 fi
 
 echo "==> Installing systemd services..."
-bash "$INSTALL_DIR/scripts/install-services.sh"
+bash "$INSTALL_DIR/services/infra/install-services.sh"
 
 echo "==> Enabling services..."
 sudo systemctl enable mediamtx stream.service monitor-http.service detect.service
 
-echo "Done. Reboot or run './scripts/monitor.sh start' to start the monitor."
+echo "Done. Reboot or run 'services/infra/monitor.sh start' to start the monitor."
 echo "NOTE: Edit .env and set NTFY_TOPIC before starting detect.service."
