@@ -12,14 +12,23 @@
     body {
       font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
       margin: 0;
-      padding: 16px;
       background: #f7f7f5;
       color: #111;
       display: flex;
-      flex-direction: column;
       align-items: center;
+      justify-content: center;
       height: 100vh;
       height: 100dvh;
+    }
+
+    #app {
+      width: 100%;
+      max-width: min(90vw, 960px);
+      height: 100%;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       overflow: hidden;
     }
 
@@ -174,6 +183,8 @@
       width: 100%;
       flex: 1;
       min-height: 0;
+      /* cap at 2× natural 16:9 height + audio section height (~90px) */
+      max-height: calc((min(90vw, 960px) - 32px) * 9 / 8 + 90px);
       border: 1.5px solid #e5e5e3;
       border-radius: 10px;
       overflow: hidden;
@@ -228,7 +239,7 @@
 
     #waveform {
       width: 100%;
-      height: 36px;
+      height: 52px;
       background: #f0f0ee;
       border-radius: 3px;
       display: block;
@@ -339,9 +350,25 @@
 
     #detect-error.visible { display: block; }
 
+    @media (min-width: 700px) {
+      #app { padding: 32px; }
+      h1 { font-size: 1.5rem; }
+      #header { margin-bottom: 20px; gap: 20px; }
+      #status-dot { width: 10px; height: 10px; }
+      #status-btn { font-size: 0.95rem; padding: 8px 14px; }
+      #audio-section { padding: 12px 20px 16px; gap: 8px; }
+      #audio-label { font-size: 0.78rem; }
+      #waveform { height: 80px; }
+      button { width: 56px; height: 56px; }
+      button .material-icons { font-size: 26px; }
+      #action-bar { margin-top: 16px; gap: 12px; }
+      #action-bar button { height: 58px; font-size: 1.05rem; }
+    }
+
   </style>
 </head>
 <body>
+  <div id="app">
   <div id="log-modal" onclick="closeLogModal()">
     <div id="log-card" onclick="event.stopPropagation()">
       <div id="log-card-header">
@@ -386,6 +413,7 @@
     </button>
   </div>
   <div id="detect-error"></div>
+  </div>
 
   <script>
     const video = document.getElementById('video');
@@ -397,11 +425,15 @@
     let history, histPos, lastTick;
 
     // --- Tuning knobs ---
-    const SCROLL_MS = 150;      // ms per pixel scroll (higher = slower)
+    const SCROLL_MS = 300;      // ms per bar scroll (higher = slower)
     const SENSITIVITY = 4;      // visual amplification (higher = more reactive)
     const YELLOW_THRESHOLD = 0.1; // fraction of max amplitude where green → yellow
     const RED_THRESHOLD = 0.3;    // fraction of max amplitude where yellow → red
+    const BAR_W = 3;              // bar width in px
+    const BAR_GAP = 1;            // gap between bars in px
     // --------------------
+
+    function calcNumBars() { return Math.floor(canvas.width / (BAR_W + BAR_GAP)); }
 
     function drawWaveform() {
       requestAnimationFrame(drawWaveform);
@@ -420,21 +452,18 @@
 
       const w = canvas.width, h = canvas.height;
       ctx.clearRect(0, 0, w, h);
-      ctx.lineWidth = 1;
 
+      const step = BAR_W + BAR_GAP;
+      const n = history.length;
       const colors = ['#4ade80', '#facc15', '#f87171'];
-      const paths = [new Path2D(), new Path2D(), new Path2D()];
-      for (let i = 0; i < w; i++) {
-        const val = history[(histPos + i) % w];
-        const amp = val * h * SENSITIVITY;
+
+      for (let i = 0; i < n; i++) {
+        const val = history[(histPos + i) % n];
+        const barH = val * h * SENSITIVITY;
         const tier = val < YELLOW_THRESHOLD ? 0 : val < RED_THRESHOLD ? 1 : 2;
-        paths[tier].moveTo(i + 0.5, h / 2 - amp);
-        paths[tier].lineTo(i + 0.5, h / 2 + amp);
+        ctx.fillStyle = colors[tier];
+        ctx.fillRect(i * step, h - barH, BAR_W, barH);
       }
-      colors.forEach((color, i) => {
-        ctx.strokeStyle = color;
-        ctx.stroke(paths[i]);
-      });
     }
 
     function setupAnalyser(stream) {
@@ -447,7 +476,7 @@
       source.connect(analyser);
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
-      history = new Float32Array(canvas.width).fill(0);
+      history = new Float32Array(calcNumBars()).fill(0);
       histPos = 0;
       lastTick = 0;
     }
@@ -459,14 +488,15 @@
       canvas.width = newW;
       canvas.height = newH;
       if (history) {
-        const oldW = history.length;
-        const newHistory = new Float32Array(newW).fill(0);
-        if (newW >= oldW) {
-          for (let i = 0; i < oldW; i++)
-            newHistory[newW - oldW + i] = history[(histPos + i) % oldW];
+        const oldN = history.length;
+        const newN = calcNumBars();
+        const newHistory = new Float32Array(newN).fill(0);
+        if (newN >= oldN) {
+          for (let i = 0; i < oldN; i++)
+            newHistory[newN - oldN + i] = history[(histPos + i) % oldN];
         } else {
-          for (let i = 0; i < newW; i++)
-            newHistory[i] = history[(histPos + oldW - newW + i) % oldW];
+          for (let i = 0; i < newN; i++)
+            newHistory[i] = history[(histPos + oldN - newN + i) % oldN];
         }
         history = newHistory;
         histPos = 0;
@@ -650,7 +680,7 @@
           const truncated = lines.slice(-LOG_MAX_LINES);
           const label = s.name;
           const div = document.createElement('div');
-          div.className = 'log-section';
+          div.className = 'log-section open';
           div.innerHTML = `
             <div class="log-section-header" style="color:${color}">
               <span>${label}</span>
