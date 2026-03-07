@@ -10,11 +10,11 @@
 </head>
 <body>
   <div id="app">
-  <div id="log-modal" onclick="closeLogModal()">
-    <div id="log-card" onclick="event.stopPropagation()">
+  <div id="log-modal">
+    <div id="log-card">
       <div id="log-card-header">
         <span>Service Logs</span>
-        <button id="log-close-btn" onclick="closeLogModal()" aria-label="Close"><span class="material-icons">close</span></button>
+        <button id="log-close-btn" aria-label="Close"><span class="material-icons">close</span></button>
       </div>
       <div id="log-content"></div>
     </div>
@@ -22,7 +22,7 @@
 
   <div id="header">
     <h1>May Monitor</h1>
-    <button id="status-btn" onclick="openLogModal()" aria-label="Service status">
+    <button id="status-btn" aria-label="Service status">
       <span id="status-dot"></span>
       <span id="status-label">—</span>
     </button>
@@ -33,8 +33,8 @@
       <video id="video" autoplay playsinline muted></video>
       <div id="cry-alert">Crying detected</div>
       <div id="overlay">
-        <button id="overlayMuteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
-        <button id="overlayFsBtn" onclick="toggleFullscreen()" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
+        <button id="overlayMuteBtn" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
+        <button id="overlayFsBtn" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
       </div>
     </div>
     <div id="audio-section">
@@ -44,11 +44,11 @@
   </div>
 
   <div id="action-bar">
-    <button id="notify-btn" onclick="toggleNotifications()" aria-label="Disable notifications">
+    <button id="notify-btn" aria-label="Disable notifications">
       <span class="material-icons">notifications</span>
       <span>Notifications</span>
     </button>
-    <button id="log-btn" onclick="openLogModal()" aria-label="Service logs">
+    <button id="log-btn" aria-label="Service logs">
       <span class="material-icons">list</span>
       <span>Logs</span>
     </button>
@@ -56,6 +56,6 @@
   <div id="detect-error"></div>
   </div>
 
-  <script src="/js/app.js" defer></script>
+  <script type="module" src="/js/app.js"></script>
 </body>
 </html>

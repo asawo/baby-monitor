@@ -18,7 +18,7 @@ else
 fi
 
 echo "==> Installing udev rules..."
-sudo cp "$INSTALL_DIR/services/infra/udev/99-baby-monitor.rules" /etc/udev/rules.d/
+sudo cp "$INSTALL_DIR/config/99-baby-monitor.udev.rules" /etc/udev/rules.d/99-baby-monitor.rules
 sudo udevadm control --reload-rules
 sudo udevadm trigger --action=add --subsystem-match=video4linux
 
@@ -36,10 +36,10 @@ else
 fi
 
 echo "==> Installing systemd services..."
-bash "$INSTALL_DIR/services/infra/install-services.sh"
+bash "$INSTALL_DIR/setup/systemd.sh"
 
 echo "==> Enabling services..."
 sudo systemctl enable mediamtx stream.service monitor-http.service detect.service
 
-echo "Done. Reboot or run 'services/infra/monitor.sh start' to start the monitor."
+echo "Done. Reboot or run 'services/control.sh start' to start the monitor."
 echo "NOTE: Edit .env and set NTFY_TOPIC before starting detect.service."

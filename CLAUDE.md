@@ -55,19 +55,20 @@ server/
     css/style.css
     js/app.js
 services/
+  control.sh                 # Start/stop/status all services
   stream/stream.sh           # FFmpeg capture
   detect/detect_cry.py       # YAMNet ML detection
   detect/detect.sh           # Python wrapper for systemd
   detect/requirements.txt    # Python deps
-  infra/install.sh           # Full Pi setup
-  infra/install-services.sh  # Systemd unit generator
-  infra/monitor.sh           # Start/stop/status control
-  infra/udev/                # Udev rules for stable /dev/baby-cam
+setup/
+  install.sh                 # Full Pi setup
+  systemd.sh                 # Systemd unit generator
 config/
   mediamtx.yml.example       # mediamtx config template
+  99-baby-monitor.udev.rules # Udev rule for stable /dev/baby-cam
 ```
 
-**Device stability**: A udev rule ([services/infra/udev/99-baby-monitor.rules](services/infra/udev/99-baby-monitor.rules)) creates a stable `/dev/baby-cam` symlink by matching the Logitech C270 USB IDs, so stream.service binds to `dev-baby-cam.device`.
+**Device stability**: A udev rule ([config/99-baby-monitor.udev.rules](config/99-baby-monitor.udev.rules)) creates a stable `/dev/baby-cam` symlink by matching the Logitech C270 USB IDs, so stream.service binds to `dev-baby-cam.device`.
 
 **Web UI** ([server/web/index.html](server/web/index.html)): SPA — no build step. HTML in `index.html`, styles in [server/web/css/style.css](server/web/css/style.css), JavaScript in [server/web/js/app.js](server/web/js/app.js). Uses RTCPeerConnection for WebRTC, Web Audio API for the canvas waveform visualizer. Tuning constants at top of `app.js`:
 - `SCROLL_MS` — pixels per ms of scroll speed

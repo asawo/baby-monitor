@@ -4,7 +4,7 @@ A self-hosted baby monitor that streams live video and audio from a Raspberry Pi
 
 The webcam I'm using is `Logicool Web Camera C270nd HD 720P`.
 
-## How it works
+## Overview
 
 Four systemd services run on the Pi:
 
@@ -32,7 +32,7 @@ The SPA (`server/web/index.html`, `server/web/css/style.css`, `server/web/js/app
 
 USB device paths (`/dev/videoN`, ALSA card numbers) can change across reboots depending on enumeration order. To prevent this:
 
-- **Video**: a udev rule (`services/infra/udev/99-baby-monitor.rules`) matches the webcam by USB vendor/product ID and creates a stable symlink at `/dev/baby-cam`. The stream service is bound to this device unit, so systemd waits for the camera to appear before starting and stops the service if it's unplugged.
+- **Video**: a udev rule (`config/99-baby-monitor.udev.rules`) matches the webcam by USB vendor/product ID and creates a stable symlink at `/dev/baby-cam`. The stream service is bound to this device unit, so systemd waits for the camera to appear before starting and stops the service if it's unplugged.
 - **Audio**: ALSA is addressed by card name (`hw:WEBCAM,0`) rather than card number, which is derived from the USB device descriptor and stays consistent regardless of enumeration order.
 
 ## Requirements

@@ -28,19 +28,19 @@ deploy: build sync
 
 # Full install: sync files, download mediamtx, register systemd services
 install: sync
-    ssh {{PI}} "{{REMOTE}}/services/infra/install.sh"
+    ssh {{PI}} "{{REMOTE}}/setup/install.sh"
 
 # Start all three services on the Pi (stream, mediamtx, monitor-http)
 start:
-    ssh {{PI}} "{{REMOTE}}/services/infra/monitor.sh start" < /dev/null
+    ssh {{PI}} "{{REMOTE}}/services/control.sh start" < /dev/null
 
 # Stop all services on the Pi
 stop:
-    ssh {{PI}} "{{REMOTE}}/services/infra/monitor.sh stop"
+    ssh {{PI}} "{{REMOTE}}/services/control.sh stop"
 
 # Show systemd status for all services
 status:
-    ssh {{PI}} "{{REMOTE}}/services/infra/monitor.sh status"
+    ssh {{PI}} "{{REMOTE}}/services/control.sh status"
 
 # Tail the FFmpeg stream log
 logs:
