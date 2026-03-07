@@ -41,18 +41,19 @@ Browser:
 **Services** (managed by systemd):
 - `stream.service` — FFmpeg captures `/dev/baby-cam` (v4l2) + `hw:WEBCAM,0` (ALSA), outputs RTSP
 - `mediamtx.service` — Bridges RTSP to WebRTC (WHEP protocol)
-- `monitor-http.service` — Go binary serves `./web` on port 80
+- `monitor-http.service` — Go binary serves `./server/web` on port 80
 - `detect.service` — Python YAMNet ML cry detection, reports to Go server
 
 **Directory structure**:
 ```
-cmd/server/          # Go HTTP server entry point + routing
-internal/api/        # API handler functions
-internal/state/      # Mutex-protected shared state
-web/                 # Frontend static assets (served by Go)
-  index.html
-  css/style.css
-  js/app.js
+server/
+  cmd/main.go                # Go HTTP server entry point + routing
+  internal/api/              # API handler functions + types
+  internal/state/            # Mutex-protected shared state
+  web/                       # Frontend static assets (served by Go)
+    index.html
+    css/style.css
+    js/app.js
 services/
   stream/stream.sh           # FFmpeg capture
   detect/detect_cry.py       # YAMNet ML detection
@@ -68,12 +69,12 @@ config/
 
 **Device stability**: A udev rule ([services/infra/udev/99-baby-monitor.rules](services/infra/udev/99-baby-monitor.rules)) creates a stable `/dev/baby-cam` symlink by matching the Logitech C270 USB IDs, so stream.service binds to `dev-baby-cam.device`.
 
-**Web UI** ([web/index.html](web/index.html)): SPA — no build step. HTML in `index.html`, styles in [web/css/style.css](web/css/style.css), JavaScript in [web/js/app.js](web/js/app.js). Uses RTCPeerConnection for WebRTC, Web Audio API for the canvas waveform visualizer. Tuning constants at top of `app.js`:
+**Web UI** ([server/web/index.html](server/web/index.html)): SPA — no build step. HTML in `index.html`, styles in [server/web/css/style.css](server/web/css/style.css), JavaScript in [server/web/js/app.js](server/web/js/app.js). Uses RTCPeerConnection for WebRTC, Web Audio API for the canvas waveform visualizer. Tuning constants at top of `app.js`:
 - `SCROLL_MS` — pixels per ms of scroll speed
 - `SENSITIVITY` — visual amplitude scale
 - `YELLOW_THRESHOLD` / `RED_THRESHOLD` — color thresholds
 
-**Go server** ([cmd/server/main.go](cmd/server/main.go)): Entry point, routing, middleware. API handlers in [internal/api/handlers.go](internal/api/handlers.go). Shared state in [internal/state/state.go](internal/state/state.go). Serves `./web` as static files on `:80`.
+**Go server** ([server/cmd/main.go](server/cmd/main.go)): Entry point, routing, middleware. API handlers in [server/internal/api/handlers.go](server/internal/api/handlers.go). Shared state in [server/internal/state/state.go](server/internal/state/state.go). Serves `./server/web` as static files on `:80`.
 
 ## Environment
 

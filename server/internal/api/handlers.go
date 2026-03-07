@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"babymonitor/internal/state"
+	"babymonitor/server/internal/state"
 )
 
 var services = []string{"mediamtx", "stream.service", "monitor-http.service", "detect.service"}

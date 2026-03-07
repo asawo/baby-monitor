@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"babymonitor/internal/api"
+	"babymonitor/server/internal/api"
 )
 
 func privateNetworkMiddleware(next http.Handler) http.Handler {
@@ -29,7 +29,7 @@ func main() {
 	mux.HandleFunc("/api/notifications", api.NotificationsHandler)
 	mux.HandleFunc("/api/cry", api.CryHandler)
 	mux.HandleFunc("/api/detect-status", api.DetectStatusHandler)
-	mux.Handle("/", http.FileServer(http.Dir("./web")))
+	mux.Handle("/", http.FileServer(http.Dir("./server/web")))
 
 	addr := ":80"
 	log.Printf("Serving on http://0.0.0.0%s\n", addr)

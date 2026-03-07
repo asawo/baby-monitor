@@ -19,7 +19,7 @@ Open `http://monitor.local` in a browser and the page connects directly to the W
 
 ### Web UI
 
-The SPA (`web/index.html`, `web/css/style.css`, `web/js/app.js`) provides:
+The SPA (`server/web/index.html`, `server/web/css/style.css`, `server/web/js/app.js`) provides:
 
 - **Live video** — WebRTC stream at a fixed 16:9 aspect ratio
 - **Audio waveform** — scrolling amplitude visualiser with colour-coded levels (green → yellow → red); resizes with the window while preserving history

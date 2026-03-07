@@ -15,7 +15,7 @@ setup:
 
 # Cross-compile the Go HTTP server for linux/arm64 (Raspberry Pi)
 build:
-    GOOS=linux GOARCH=arm64 go build -o bin/monitor ./cmd/server/
+    GOOS=linux GOARCH=arm64 go build -o bin/monitor ./server/cmd/
 
 # Sync project files to the Pi (runs setup first to generate mediamtx.yml)
 sync: setup
