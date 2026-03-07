@@ -41,7 +41,7 @@ USB device paths (`/dev/videoN`, ALSA card numbers) can change across reboots de
 - SSH access from your dev machine
 - [`just`](https://github.com/casey/just) — install with `brew install just`
 - Go 1.21+ (to build the HTTP server binary)
-- TypeScript (`npm install -g typescript`) for the frontend
+- Node.js / npm (for TypeScript — run `npm install` once after cloning)
 - `rsync` and `scp` on your dev machine
 
 ## Setup

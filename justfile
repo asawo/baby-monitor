@@ -20,12 +20,29 @@ gen:
 
 # Cross-compile the Go HTTP server for linux/arm64 (Raspberry Pi)
 build: gen
-    tsc
+    npx tsc
     GOOS=linux GOARCH=arm64 go build -o bin/monitor ./server/cmd/
 
 # Sync project files to the Pi (runs setup first to generate mediamtx.yml)
 sync: setup
-    rsync -av --exclude bin/ --exclude mediamtx ./ {{PI}}:{{REMOTE}}/
+    rsync -av \
+        --exclude bin/ \
+        --exclude mediamtx \
+        --exclude node_modules/ \
+        --exclude .git/ \
+        --exclude .github/ \
+        --exclude server/web/src/ \
+        --exclude server/cmd/ \
+        --exclude server/internal/ \
+        --exclude tsconfig.json \
+        --exclude package.json \
+        --exclude package-lock.json \
+        --exclude tygo.yaml \
+        --exclude go.mod \
+        --exclude CLAUDE.md \
+        --exclude README.md \
+        --exclude justfile \
+        ./ {{PI}}:{{REMOTE}}/
 
 # Build binary, sync all files, then deploy the binary atomically and restart HTTP service
 deploy: build sync
