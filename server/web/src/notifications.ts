@@ -4,7 +4,9 @@ const notifyBtn = document.getElementById('notify-btn') as HTMLElement;
 
 function updateNotifyBtn(enabled: boolean) {
   (notifyBtn.querySelector('.material-icons') as HTMLElement).textContent = enabled ? 'notifications' : 'notifications_off';
+  (notifyBtn.querySelector('span:not(.material-icons)') as HTMLElement).textContent = enabled ? 'Notifications: ON' : 'Notifications: OFF';
   notifyBtn.setAttribute('aria-label', enabled ? 'Disable notifications' : 'Enable notifications');
+  notifyBtn.classList.toggle('active', enabled);
   notifyBtn.classList.toggle('disabled', !enabled);
 }
 
