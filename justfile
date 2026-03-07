@@ -11,11 +11,16 @@ PI_IP   := env_var_or_default("PI_IP", "192.168.1.100")
 
 # Generate mediamtx.yml from the example template, substituting PI_IP
 setup:
-    @sed 's/YOUR_PI_IP/{{PI_IP}}/' mediamtx.yml.example > mediamtx.yml
+    @sed 's/YOUR_PI_IP/{{PI_IP}}/' config/mediamtx.yml.example > mediamtx.yml
+
+# Generate JS/TS types from Go API structs
+gen:
+    $(go env GOPATH)/bin/tygo generate
+    sed -i '' 's/detected_at?: string/detected_at: string | null/' server/web/js/api_types.d.ts
 
 # Cross-compile the Go HTTP server for linux/arm64 (Raspberry Pi)
-build:
-    GOOS=linux GOARCH=arm64 go build -o bin/monitor .
+build: gen
+    GOOS=linux GOARCH=arm64 go build -o bin/monitor ./server/cmd/
 
 # Sync project files to the Pi (runs setup first to generate mediamtx.yml)
 sync: setup
@@ -28,32 +33,32 @@ deploy: build sync
 
 # Full install: sync files, download mediamtx, register systemd services
 install: sync
-    ssh {{PI}} "{{REMOTE}}/scripts/install.sh"
+    ssh {{PI}} "{{REMOTE}}/setup/install.sh"
 
 # Start all three services on the Pi (stream, mediamtx, monitor-http)
 start:
-    ssh {{PI}} "{{REMOTE}}/scripts/monitor.sh start" < /dev/null
+    ssh {{PI}} "{{REMOTE}}/services/control.sh start" < /dev/null
 
 # Stop all services on the Pi
 stop:
-    ssh {{PI}} "{{REMOTE}}/scripts/monitor.sh stop"
+    ssh {{PI}} "{{REMOTE}}/services/control.sh stop"
 
 # Show systemd status for all services
 status:
-    ssh {{PI}} "{{REMOTE}}/scripts/monitor.sh status"
+    ssh {{PI}} "{{REMOTE}}/services/control.sh status"
 
 # Tail the FFmpeg stream log
 logs:
-    ssh {{PI}} "tail -f {{REMOTE}}/ffmpeg.log"
+    ssh {{PI}} "tail -f {{REMOTE}}/logs/ffmpeg.log"
 
 # Tail the Go HTTP server log
 logs-http:
-    ssh {{PI}} "tail -f {{REMOTE}}/monitor.log"
+    ssh {{PI}} "tail -f {{REMOTE}}/logs/monitor.log"
 
 # Tail the cry detection log
 logs-detect:
-    ssh {{PI}} "tail -f {{REMOTE}}/detect.log"
+    ssh {{PI}} "tail -f {{REMOTE}}/logs/detect.log"
 
 # Run cry detection unit tests on the Pi
 test:
-    ssh {{PI}} "{{REMOTE}}/venv/bin/python3 {{REMOTE}}/scripts/test_cry.py"
+    ssh {{PI}} "{{REMOTE}}/venv/bin/python3 {{REMOTE}}/services/detect/test_cry.py"

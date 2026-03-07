@@ -1,0 +1,5 @@
+packages:
+  - path: "babymonitor/server/internal/api"
+    output_path: "server/web/js/api_types.d.ts"
+    type_mappings:
+      time.Time: "string"

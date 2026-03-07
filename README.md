@@ -4,32 +4,35 @@ A self-hosted baby monitor that streams live video and audio from a Raspberry Pi
 
 The webcam I'm using is `Logicool Web Camera C270nd HD 720P`.
 
-## How it works
+## Overview
 
-Three systemd services run on the Pi:
+Four systemd services run on the Pi:
 
 | Service | Role |
 |---|---|
 | `stream` | FFmpeg captures video (v4l2) and audio (ALSA) and pushes an RTSP stream |
 | `mediamtx` | Receives the RTSP stream and re-publishes it over WebRTC (WHEP) |
 | `monitor-http` | Go HTTP server serves the web UI on port 80 |
+| `detect` | Python ML service classifies audio for baby cries and sends push notifications |
 
 Open `http://monitor.local` in a browser and the page connects directly to the WebRTC stream.
 
 ### Web UI
 
-The single-page UI (`public/index.html`) provides:
+The SPA (`server/web/index.html`, `server/web/css/style.css`, `server/web/js/app.js`) provides:
 
 - **Live video** — WebRTC stream at a fixed 16:9 aspect ratio
 - **Audio waveform** — scrolling amplitude visualiser with colour-coded levels (green → yellow → red); resizes with the window while preserving history
 - **Mute / fullscreen** — overlay buttons on the video
 - **Connectivity status** — live indicator in the controls bar that polls `/api/status` every 10 seconds; clicking it opens a log modal that fetches recent service logs from `/api/logs`
+- **Cry alert** — banner overlay when a cry is detected within the last 10 seconds
+- **Notifications toggle** — enable/disable push notifications sent via ntfy.sh
 
 ### Device stability
 
 USB device paths (`/dev/videoN`, ALSA card numbers) can change across reboots depending on enumeration order. To prevent this:
 
-- **Video**: a udev rule (`scripts/udev/99-baby-monitor.rules`) matches the webcam by USB vendor/product ID and creates a stable symlink at `/dev/baby-cam`. The stream service is bound to this device unit, so systemd waits for the camera to appear before starting and stops the service if it's unplugged.
+- **Video**: a udev rule (`config/99-baby-monitor.udev.rules`) matches the webcam by USB vendor/product ID and creates a stable symlink at `/dev/baby-cam`. The stream service is bound to this device unit, so systemd waits for the camera to appear before starting and stops the service if it's unplugged.
 - **Audio**: ALSA is addressed by card name (`hw:WEBCAM,0`) rather than card number, which is derived from the USB device descriptor and stays consistent regardless of enumeration order.
 
 ## Requirements
@@ -63,7 +66,7 @@ PI_IP=192.168.1.100  # Pi's LAN IP (used for WebRTC ICE candidates)
 just install
 ```
 
-This builds the Go binary, syncs all files to the Pi (including a generated `mediamtx.yml`), downloads mediamtx, installs the udev rules for stable device paths, and registers the three systemd services.
+This builds the Go binary, syncs all files to the Pi (including a generated `mediamtx.yml`), downloads mediamtx, installs the Python venv + YAMNet model for cry detection, installs the udev rules for stable device paths, and registers all four systemd services.
 
 **3. Start the monitor**
 
@@ -80,7 +83,7 @@ Run `just --list` to see all available recipes.
 | Command | Description |
 |---|---|
 | `just build` | Cross-compile the Go HTTP server for linux/arm64 |
-| `just setup` | Generate `mediamtx.yml` from `mediamtx.yml.example` using `PI_IP` |
+| `just setup` | Generate `mediamtx.yml` from `config/mediamtx.yml.example` using `PI_IP` |
 | `just sync` | Sync project files to the Pi |
 | `just deploy` | Build + sync + install binary |
 | `just install` | Full install: sync files + download mediamtx + register services |
@@ -89,6 +92,8 @@ Run `just --list` to see all available recipes.
 | `just status` | Show systemd status for all services |
 | `just logs` | Tail the FFmpeg log |
 | `just logs-http` | Tail the HTTP server log |
+| `just logs-detect` | Tail the cry detection log |
+| `just test` | Run cry detection unit tests on the Pi |
 
 ## Hardware tested on
 
