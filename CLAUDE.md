@@ -70,7 +70,7 @@ config/
 
 **Device stability**: A udev rule ([config/99-baby-monitor.udev.rules](config/99-baby-monitor.udev.rules)) creates a stable `/dev/baby-cam` symlink by matching the Logitech C270 USB IDs, so stream.service binds to `dev-baby-cam.device`.
 
-**Web UI** ([server/web/index.html](server/web/index.html)): SPA — no build step. HTML in `index.html`, styles in [server/web/css/style.css](server/web/css/style.css), JavaScript in [server/web/js/app.js](server/web/js/app.js). Uses RTCPeerConnection for WebRTC, Web Audio API for the canvas waveform visualizer. Tuning constants at top of `app.js`:
+**Web UI** ([server/web/index.html](server/web/index.html)): SPA. HTML in `index.html`, styles in [server/web/css/style.css](server/web/css/style.css), TypeScript source in [server/web/src/](server/web/src/), compiled to `server/web/dist/` by `tsc` (run as part of `just build`). Uses RTCPeerConnection for WebRTC, Web Audio API for the canvas waveform visualizer. Tuning constants at top of `waveform.ts`:
 - `SCROLL_MS` — pixels per ms of scroll speed
 - `SENSITIVITY` — visual amplitude scale
 - `YELLOW_THRESHOLD` / `RED_THRESHOLD` — color thresholds

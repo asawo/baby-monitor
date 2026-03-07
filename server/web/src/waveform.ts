@@ -1,5 +1,5 @@
-const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('waveform'));
-const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+const canvas = document.getElementById('waveform') as HTMLCanvasElement;
+const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 // --- Tuning knobs ---
 const SCROLL_MS = 300;        // ms per bar scroll (higher = slower)
@@ -10,16 +10,11 @@ const BAR_W = 3;              // bar width in px
 const BAR_GAP = 1;            // gap between bars in px
 // --------------------
 
-/** @type {AnalyserNode | null} */
-let analyser = null;
-/** @type {Uint8Array<ArrayBuffer> | null} */
-let waveBuffer = null;
-/** @type {AudioContext | null} */
-let audioCtx = null;
-/** @type {MediaStream | null} */
-let pendingAudioStream = null;
-/** @type {Float32Array | null} */
-let history = null;
+let analyser: AnalyserNode | null = null;
+let waveBuffer: Uint8Array | null = null;
+let audioCtx: AudioContext | null = null;
+let pendingAudioStream: MediaStream | null = null;
+let history: Float32Array | null = null;
 let histPos = 0, lastTick = 0;
 let wasAudioActive = false;
 
@@ -56,8 +51,7 @@ function drawWaveform() {
   }
 }
 
-/** @param {MediaStream} stream */
-function setupAnalyser(stream) {
+function setupAnalyser(stream: MediaStream) {
   audioCtx = new AudioContext();
   const source = audioCtx.createMediaStreamSource(stream);
   analyser = audioCtx.createAnalyser();
@@ -105,8 +99,7 @@ export function init() {
   });
 }
 
-/** @param {MediaStream} stream */
-export function setupAudio(stream) {
+export function setupAudio(stream: MediaStream) {
   pendingAudioStream = stream;
   if (wasAudioActive) setupAnalyser(stream);
 }

@@ -1,14 +1,13 @@
-/** @import { CryResponse, DetectStatusResponse } from './api_types' */
+import type { CryResponse, DetectStatusResponse } from './api_types.js';
 
-const cryAlert = /** @type {HTMLElement} */ (document.getElementById('cry-alert'));
-const detectErrorEl = /** @type {HTMLElement} */ (document.getElementById('detect-error'));
+const cryAlert = document.getElementById('cry-alert') as HTMLElement;
+const detectErrorEl = document.getElementById('detect-error') as HTMLElement;
 const CRY_RECENT_SECONDS = 10;
 
 async function pollCry() {
   try {
     const res = await fetch('/api/cry');
-    /** @type {CryResponse} */
-    const data = await res.json();
+    const data: CryResponse = await res.json();
     const recent = data.detected_at != null && data.seconds_ago != null && data.seconds_ago < CRY_RECENT_SECONDS;
     cryAlert.classList.toggle('visible', recent);
   } catch {}
@@ -17,8 +16,7 @@ async function pollCry() {
 async function pollDetectStatus() {
   try {
     const res = await fetch('/api/detect-status');
-    /** @type {DetectStatusResponse} */
-    const data = await res.json();
+    const data: DetectStatusResponse = await res.json();
     if (data.error) {
       detectErrorEl.textContent = 'Detector error: ' + data.error;
       detectErrorEl.classList.add('visible');

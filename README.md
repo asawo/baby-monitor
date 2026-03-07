@@ -19,7 +19,7 @@ Open `http://monitor.local` in a browser and the page connects directly to the W
 
 ### Web UI
 
-The SPA (`server/web/index.html`, `server/web/css/style.css`, `server/web/js/app.js`) provides:
+The SPA (`server/web/index.html`, `server/web/css/style.css`, TypeScript source in `server/web/src/`) provides:
 
 - **Live video** — WebRTC stream at a fixed 16:9 aspect ratio
 - **Audio waveform** — scrolling amplitude visualiser with colour-coded levels (green → yellow → red); resizes with the window while preserving history
@@ -41,6 +41,7 @@ USB device paths (`/dev/videoN`, ALSA card numbers) can change across reboots de
 - SSH access from your dev machine
 - [`just`](https://github.com/casey/just) — install with `brew install just`
 - Go 1.21+ (to build the HTTP server binary)
+- TypeScript (`npm install -g typescript`) for the frontend
 - `rsync` and `scp` on your dev machine
 
 ## Setup
@@ -82,7 +83,7 @@ Run `just --list` to see all available recipes.
 
 | Command | Description |
 |---|---|
-| `just build` | Cross-compile the Go HTTP server for linux/arm64 |
+| `just build` | Compile TypeScript frontend + cross-compile Go server for linux/arm64 |
 | `just setup` | Generate `mediamtx.yml` from `config/mediamtx.yml.example` using `PI_IP` |
 | `just sync` | Sync project files to the Pi |
 | `just deploy` | Build + sync + install binary |
