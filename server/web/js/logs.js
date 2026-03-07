@@ -1,4 +1,4 @@
-/** @import { LogSection } from './types.js' */
+/** @import { ServiceLog } from './api_types' */
 
 const LOG_SECTION_COLORS = {
   'mediamtx':             '#60a5fa', // blue
@@ -15,7 +15,7 @@ export async function openLogModal() {
   container.innerHTML = '<span style="color:#888">Loading…</span>';
   try {
     const res = await fetch('/api/logs');
-    /** @type {LogSection[]} */
+    /** @type {ServiceLog[]} */
     const sections = await res.json();
     container.innerHTML = '';
     sections.forEach(s => {

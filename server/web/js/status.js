@@ -5,7 +5,7 @@ export const StreamStatus = Object.freeze({
   FAILED: 'failed',
 });
 
-/** @import { ServiceStatus } from './types.js' */
+/** @import { ServiceStatus } from './api_types' */
 
 /** @type {string} */
 let streamStatus = StreamStatus.UNKNOWN;

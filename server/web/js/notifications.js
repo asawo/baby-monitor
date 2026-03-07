@@ -1,4 +1,4 @@
-/** @import { NotificationsState } from './types.js' */
+/** @import { NotificationsResponse } from './api_types' */
 
 const notifyBtn = /** @type {HTMLElement} */ (document.getElementById('notify-btn'));
 
@@ -12,7 +12,7 @@ function updateNotifyBtn(enabled) {
 async function loadNotificationsState() {
   try {
     const res = await fetch('/api/notifications');
-    /** @type {NotificationsState} */
+    /** @type {NotificationsResponse} */
     const data = await res.json();
     updateNotifyBtn(data.enabled);
   } catch {}
@@ -21,7 +21,7 @@ async function loadNotificationsState() {
 export async function toggleNotifications() {
   try {
     const res = await fetch('/api/notifications', { method: 'POST' });
-    /** @type {NotificationsState} */
+    /** @type {NotificationsResponse} */
     const data = await res.json();
     updateNotifyBtn(data.enabled);
   } catch {}

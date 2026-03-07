@@ -13,8 +13,13 @@ PI_IP   := env_var_or_default("PI_IP", "192.168.1.100")
 setup:
     @sed 's/YOUR_PI_IP/{{PI_IP}}/' config/mediamtx.yml.example > mediamtx.yml
 
+# Generate JS/TS types from Go API structs
+gen:
+    $(go env GOPATH)/bin/tygo generate
+    sed -i '' 's/detected_at?: string/detected_at: string | null/' server/web/js/api_types.d.ts
+
 # Cross-compile the Go HTTP server for linux/arm64 (Raspberry Pi)
-build:
+build: gen
     GOOS=linux GOARCH=arm64 go build -o bin/monitor ./server/cmd/
 
 # Sync project files to the Pi (runs setup first to generate mediamtx.yml)
