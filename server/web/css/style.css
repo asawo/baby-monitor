@@ -14,6 +14,13 @@
   --btn-primary-text: #f7f7f5;
   --waveform-bg: #f0f0ee;
   --h-pad: 16px;
+  /* Signal colors — theme-independent */
+  --green: #4ade80;
+  --green-dark: #16a34a;
+  --green-darker: #15803d;
+  --yellow: #facc15;
+  --red: #f87171;
+  --red-dark: #dc2626;
   color-scheme: light dark;
 }
 
@@ -140,10 +147,10 @@ h1 {
 }
 
 #status-btn:hover { background: var(--border); }
-#status-btn.ok { color: #16a34a; }
-#status-btn.err { color: #dc2626; }
-#status-btn.ok #status-dot { background: #4ade80; }
-#status-btn.err #status-dot { background: #f87171; }
+#status-btn.ok { color: var(--green-dark); }
+#status-btn.err { color: var(--red-dark); }
+#status-btn.ok #status-dot { background: var(--green); }
+#status-btn.err #status-dot { background: var(--red); }
 
 #log-modal {
   display: none;
@@ -292,6 +299,22 @@ video {
   flex-shrink: 0;
 }
 
+#audio-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#audio-icon {
+  font-size: 1rem;
+  color: var(--text-faint);
+  transition: color 0.2s;
+}
+
+#audio-icon.level-low  { color: var(--green); }
+#audio-icon.level-mid  { color: var(--yellow); }
+#audio-icon.level-high { color: var(--red); }
+
 #audio-label {
   font-size: 0.62rem;
   font-weight: 600;
@@ -325,7 +348,7 @@ button {
 
 button:hover { background: var(--btn-primary-bg-hover); }
 
-button:focus-visible { outline: 2px solid #4ade80; outline-offset: 2px; }
+button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 
 button .material-icons { font-size: 18px; }
 
@@ -428,6 +451,15 @@ button .material-icons { font-size: 18px; }
 
 #notify-btn:hover, #log-btn:hover { background: var(--btn-secondary-bg-hover); }
 
+#notify-btn.active {
+  background: var(--green-dark);
+  color: #fff;
+}
+
+#notify-btn.active:hover {
+  background: var(--green-darker);
+}
+
 #notify-btn.disabled,
 #notify-btn:disabled {
   opacity: 0.45;
@@ -435,7 +467,7 @@ button .material-icons { font-size: 18px; }
 
 #detect-error {
   font-size: 0.7rem;
-  color: #f87171;
+  color: var(--red);
   width: 100%;
   margin-top: 4px;
   white-space: nowrap;

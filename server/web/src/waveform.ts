@@ -1,5 +1,6 @@
 const canvas = document.getElementById('waveform') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+const audioIcon = document.getElementById('audio-icon') as HTMLElement;
 
 // --- Tuning knobs ---
 const SCROLL_MS = 300;        // ms per bar scroll (higher = slower)
@@ -21,6 +22,7 @@ let pendingAudioStream: MediaStream | null = null;
 let history: Float32Array | null = null;
 let histPos = 0, lastTick = 0;
 let wasAudioActive = false;
+let lastIconLevel = '';
 
 function calcNumBars() { return Math.floor(canvas.width / (BAR_W + BAR_GAP)); }
 
@@ -37,7 +39,14 @@ function drawWaveform() {
   for (let i = 0; i < waveBuffer.length; i++) {
     peak = Math.max(peak, Math.abs(waveBuffer[i] - 128));
   }
-  history[histPos++ % history.length] = peak / 128;
+  const norm = peak / 128;
+  history[histPos++ % history.length] = norm;
+
+  const level = norm >= RED_THRESHOLD ? 'high' : norm >= YELLOW_THRESHOLD ? 'mid' : 'low';
+  if (level !== lastIconLevel) {
+    audioIcon.className = `material-icons level-${level}`;
+    lastIconLevel = level;
+  }
 
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
