@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"babymonitor/server/internal/api"
@@ -32,9 +31,9 @@ func main() {
 	mux.Handle("/", http.FileServer(http.Dir("./server/web")))
 
 	addr := ":80"
-	log.Printf("Serving on http://0.0.0.0%s\n", addr)
+	logf("Serving on http://0.0.0.0%s", addr)
 
 	if err := http.ListenAndServe(addr, privateNetworkMiddleware(mux)); err != nil {
-		log.Fatal(err)
+		logFatal("%v", err)
 	}
 }

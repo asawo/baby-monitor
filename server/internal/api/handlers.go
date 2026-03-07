@@ -49,7 +49,7 @@ func LogsHandler(w http.ResponseWriter, r *http.Request) {
 				content = string(out)
 			}
 		} else {
-			out, err := exec.Command("journalctl", "--no-pager", "-n", "50", "--output=short", "-u", svc).Output()
+			out, err := exec.Command("journalctl", "--no-pager", "-n", "50", "--output=short-iso", "-u", svc).Output()
 			if err != nil {
 				content = fmt.Sprintf("(journalctl error: %v)", err)
 			} else {

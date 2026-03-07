@@ -22,7 +22,13 @@ import time
 import subprocess
 import urllib.request
 import urllib.error
+from datetime import datetime
 import numpy as np
+
+
+def log(*args, **kwargs):
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f'[{ts}]', *args, **kwargs)
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -85,7 +91,7 @@ def _post_to_server(endpoint, payload, label):
         with urllib.request.urlopen(req, timeout=2):
             pass
     except Exception as e:
-        print(f"  (could not report {label} to server: {e})", file=sys.stderr)
+        log(f"  (could not report {label} to server: {e})", file=sys.stderr)
 
 
 def report_detect_status(error_message):
@@ -118,16 +124,16 @@ def notify(message):
 
     if now - _last_notification < COOLDOWN:
         remaining = int(COOLDOWN - (now - _last_notification))
-        print(f"  (cooldown: {remaining}s remaining, skipping notification)")
+        log(f"  (cooldown: {remaining}s remaining, skipping notification)")
         return
 
     _refresh_notifications_enabled()
     if not _notifications_enabled:
-        print("  (notifications disabled via UI, skipping)")
+        log("  (notifications disabled via UI, skipping)")
         return
 
     if not NTFY_TOPIC:
-        print("WARNING: NTFY_TOPIC not set — skipping notification (set it in .env)")
+        log("WARNING: NTFY_TOPIC not set — skipping notification (set it in .env)")
         return
 
     url = f"{NTFY_URL}/{NTFY_TOPIC}"
@@ -140,9 +146,9 @@ def notify(message):
         with urllib.request.urlopen(req, timeout=5):
             pass
         _last_notification = now
-        print(f"  Notification sent to ntfy.sh/{NTFY_TOPIC}")
+        log(f"  Notification sent to ntfy.sh/{NTFY_TOPIC}")
     except urllib.error.URLError as e:
-        print(f"  Notification failed: {e}", file=sys.stderr)
+        log(f"  Notification failed: {e}", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
@@ -167,21 +173,21 @@ def open_ffmpeg_stream(rtsp_url):
 # Main loop
 # ---------------------------------------------------------------------------
 def main():
-    print(f"Loading model: {MODEL_PATH}")
+    log(f"Loading model: {MODEL_PATH}")
     try:
         interpreter, input_idx, output_idx = load_model(MODEL_PATH)
     except Exception as e:
         msg = f"Model load failed: {e}"
-        print(msg, file=sys.stderr)
+        log(msg, file=sys.stderr)
         report_detect_status(msg)
         sys.exit(1)
     report_detect_status("")  # clear any previous error
-    print(f"Model loaded.")
-    print(f"Starting cry detection (threshold={THRESHOLD}, cooldown={COOLDOWN}s)")
-    print(f"Audio source: {RTSP_URL}")
+    log(f"Model loaded.")
+    log(f"Starting cry detection (threshold={THRESHOLD}, cooldown={COOLDOWN}s)")
+    log(f"Audio source: {RTSP_URL}")
     if not NTFY_TOPIC:
-        print("WARNING: NTFY_TOPIC is not set — detections will be logged but not sent")
-    print("Listening...")
+        log("WARNING: NTFY_TOPIC is not set — detections will be logged but not sent")
+    log("Listening...")
 
     chunk_bytes = WINDOW_SAMPLES * BYTES_PER_SAMPLE
 
@@ -199,7 +205,7 @@ def main():
                 cry_score = float(scores[BABY_CRY_CLASS])
 
                 if cry_score >= THRESHOLD:
-                    print(f"Cry detected! Score: {cry_score:.3f}")
+                    log(f"Cry detected! Score: {cry_score:.3f}")
                     report_cry(cry_score)
                     notify(f"Crying detected (confidence: {cry_score:.0%})")
 
@@ -208,13 +214,13 @@ def main():
             sys.exit(0)
         except Exception as e:
             msg = f"Stream error: {e}"
-            print(msg, file=sys.stderr)
+            log(msg, file=sys.stderr)
             report_detect_status(msg)
         finally:
             proc.terminate()
             proc.wait()
 
-        print("Stream disconnected, retrying in 5s...")
+        log("Stream disconnected, retrying in 5s...")
         time.sleep(5)
 
 
