@@ -1,7 +1,10 @@
-const notifyBtn = document.getElementById('notify-btn');
+/** @import { NotificationsState } from './types.js' */
 
+const notifyBtn = /** @type {HTMLElement} */ (document.getElementById('notify-btn'));
+
+/** @param {boolean} enabled */
 function updateNotifyBtn(enabled) {
-  notifyBtn.querySelector('.material-icons').textContent = enabled ? 'notifications' : 'notifications_off';
+  /** @type {HTMLElement} */ (notifyBtn.querySelector('.material-icons')).textContent = enabled ? 'notifications' : 'notifications_off';
   notifyBtn.setAttribute('aria-label', enabled ? 'Disable notifications' : 'Enable notifications');
   notifyBtn.classList.toggle('disabled', !enabled);
 }
@@ -9,6 +12,7 @@ function updateNotifyBtn(enabled) {
 async function loadNotificationsState() {
   try {
     const res = await fetch('/api/notifications');
+    /** @type {NotificationsState} */
     const data = await res.json();
     updateNotifyBtn(data.enabled);
   } catch {}
@@ -17,6 +21,7 @@ async function loadNotificationsState() {
 export async function toggleNotifications() {
   try {
     const res = await fetch('/api/notifications', { method: 'POST' });
+    /** @type {NotificationsState} */
     const data = await res.json();
     updateNotifyBtn(data.enabled);
   } catch {}

@@ -1,10 +1,13 @@
-const cryAlert = document.getElementById('cry-alert');
-const detectErrorEl = document.getElementById('detect-error');
+/** @import { CryStatus, DetectStatus } from './types.js' */
+
+const cryAlert = /** @type {HTMLElement} */ (document.getElementById('cry-alert'));
+const detectErrorEl = /** @type {HTMLElement} */ (document.getElementById('detect-error'));
 const CRY_RECENT_SECONDS = 10;
 
 async function pollCry() {
   try {
     const res = await fetch('/api/cry');
+    /** @type {CryStatus} */
     const data = await res.json();
     const recent = data.detected_at !== null && data.seconds_ago < CRY_RECENT_SECONDS;
     cryAlert.classList.toggle('visible', recent);
@@ -14,6 +17,7 @@ async function pollCry() {
 async function pollDetectStatus() {
   try {
     const res = await fetch('/api/detect-status');
+    /** @type {DetectStatus} */
     const data = await res.json();
     if (data.error) {
       detectErrorEl.textContent = 'Detector error: ' + data.error;

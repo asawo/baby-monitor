@@ -5,16 +5,20 @@ export const StreamStatus = Object.freeze({
   FAILED: 'failed',
 });
 
+/** @import { ServiceStatus } from './types.js' */
+
 /** @type {string} */
 let streamStatus = StreamStatus.UNKNOWN;
-const statusBtn = document.getElementById('status-btn');
+const statusBtn = /** @type {HTMLElement} */ (document.getElementById('status-btn'));
 
 export function getStreamStatus() { return streamStatus; }
 
+/** @param {string} text */
 export function updateStatusLabel(text) {
-  document.getElementById('status-label').textContent = text;
+  /** @type {HTMLElement} */ (document.getElementById('status-label')).textContent = text;
 }
 
+/** @param {string} status */
 export function setStreamStatus(status) {
   streamStatus = status;
   switch (status) {
@@ -38,6 +42,7 @@ export async function pollStatus() {
   if (streamStatus === StreamStatus.RECONNECTING || streamStatus === StreamStatus.FAILED) return;
   try {
     const res = await fetch('/api/status');
+    /** @type {ServiceStatus[]} */
     const services = await res.json();
     const down = services.filter(s => !s.active);
     statusBtn.className = down.length === 0 ? 'ok' : 'err';

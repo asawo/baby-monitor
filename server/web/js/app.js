@@ -6,15 +6,18 @@ import { toggleMute, toggleFullscreen } from './controls.js';
 import { openLogModal, closeLogModal } from './logs.js';
 import { start } from './webrtc.js';
 
+/** @param {string} id @returns {HTMLElement} */
+const el = id => /** @type {HTMLElement} */ (document.getElementById(id));
+
 // Wire up UI event listeners
-document.getElementById('overlayMuteBtn').addEventListener('click', toggleMute);
-document.getElementById('overlayFsBtn').addEventListener('click', toggleFullscreen);
-document.getElementById('notify-btn').addEventListener('click', toggleNotifications);
-document.getElementById('log-btn').addEventListener('click', openLogModal);
-document.getElementById('status-btn').addEventListener('click', openLogModal);
-document.getElementById('log-close-btn').addEventListener('click', closeLogModal);
-document.getElementById('log-modal').addEventListener('click', closeLogModal);
-document.getElementById('log-card').addEventListener('click', e => e.stopPropagation());
+el('overlayMuteBtn').addEventListener('click', toggleMute);
+el('overlayFsBtn').addEventListener('click', toggleFullscreen);
+el('notify-btn').addEventListener('click', toggleNotifications);
+el('log-btn').addEventListener('click', openLogModal);
+el('status-btn').addEventListener('click', openLogModal);
+el('log-close-btn').addEventListener('click', closeLogModal);
+el('log-modal').addEventListener('click', closeLogModal);
+el('log-card').addEventListener('click', e => e.stopPropagation());
 
 // Initialize modules
 initWaveform();

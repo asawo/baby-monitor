@@ -1,11 +1,13 @@
 import { setupAudio, resetAudio } from './waveform.js';
 import { StreamStatus, setStreamStatus, pollStatus } from './status.js';
 
-const video = document.getElementById('video');
+const video = /** @type {HTMLVideoElement} */ (document.getElementById('video'));
 const whepUrl = `http://${location.hostname}:8889/baby/whep`;
 
+/** @type {RTCPeerConnection | null} */
 let pc = null;
-let reconnectTimer = null;
+/** @type {number | undefined} */
+let reconnectTimer = undefined;
 
 export function reconnect() {
   if (pc) { pc.close(); pc = null; }
@@ -24,6 +26,7 @@ export async function start() {
   };
 
   pc.onconnectionstatechange = () => {
+    if (!pc) return;
     switch (pc.connectionState) {
       case 'connected':
         clearTimeout(reconnectTimer);
