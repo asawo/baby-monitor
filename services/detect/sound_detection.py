@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """
-Baby cry detection using YAMNet TFLite model.
+Baby sound detection using YAMNet TFLite model.
 
-Reads audio from the existing RTSP stream (decoded by FFmpeg), classifies
-each ~0.975s window with YAMNet, and sends a push notification via ntfy.sh
-when a baby cry is detected.
+Detects baby cries and farts/poops from the RTSP audio stream. Classifies
+each ~0.975s window with YAMNet and applies spectral analysis to distinguish
+wet farts (poop) from dry farts. Sends push notifications via ntfy.sh.
 
 Environment variables:
   NTFY_TOPIC        (required) Unique ntfy.sh topic
   NTFY_URL          (default: https://ntfy.sh) ntfy server base URL
-  CRY_THRESHOLD     (default: 0.3) Confidence score threshold (0.0–1.0)
-  NOTIFY_COOLDOWN   (default: 120) Minimum seconds between notifications
+  CRY_THRESHOLD     (default: 0.3) Cry confidence score threshold (0.0–1.0)
+  CRY_COOLDOWN      (default: 120) Minimum seconds between cry notifications
+  FART_THRESHOLD    (default: 0.3) Fart confidence score threshold (0.0–1.0)
+  FART_COOLDOWN     (default: 120) Minimum seconds between fart notifications
+  WETNESS_THRESHOLD (default: 0.4) High-freq energy ratio to classify as wet/poop
   RTSP_URL          (default: rtsp://localhost:8554/baby) Audio source
   MODEL_PATH        (default: ~/monitor/models/yamnet.tflite)
 """
@@ -35,8 +38,11 @@ def log(*args, **kwargs):
 # ---------------------------------------------------------------------------
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 NTFY_URL = os.environ.get("NTFY_URL", "https://ntfy.sh").rstrip("/")
-THRESHOLD = float(os.environ.get("CRY_THRESHOLD", "0.3"))
-COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", "120"))
+CRY_THRESHOLD = float(os.environ.get("CRY_THRESHOLD", "0.3"))
+CRY_COOLDOWN = int(os.environ.get("CRY_COOLDOWN", "120"))
+FART_THRESHOLD = float(os.environ.get("FART_THRESHOLD", "0.3"))
+FART_COOLDOWN = int(os.environ.get("FART_COOLDOWN", "120"))
+WETNESS_THRESHOLD = float(os.environ.get("WETNESS_THRESHOLD", "0.4"))
 RTSP_URL = os.environ.get("RTSP_URL", "rtsp://localhost:8554/baby")
 
 _default_model = os.path.join(os.path.dirname(__file__), "..", "..", "models", "yamnet.tflite")
@@ -47,8 +53,10 @@ SAMPLE_RATE = 16000
 WINDOW_SAMPLES = 15600
 BYTES_PER_SAMPLE = 2  # int16
 
-# YAMNet class 20 = "Baby cry, infant cry" (AudioSet ontology)
-BABY_CRY_CLASS = 20
+# YAMNet class indices (AudioSet ontology)
+# Verify against yamnet_class_map.csv if model is updated.
+BABY_CRY_CLASS = 20   # "Baby cry, infant cry"
+FART_CLASS = 369      # "Fart"
 
 # ---------------------------------------------------------------------------
 # Model loading
@@ -72,14 +80,23 @@ def classify(interpreter, input_idx, output_idx, window_int16):
     return np.mean(scores, axis=0)  # shape: (521,)
 
 
-# ---------------------------------------------------------------------------
-# Notification
-# ---------------------------------------------------------------------------
-_last_notification = 0.0
-_notifications_enabled = True
-_notifications_last_checked = 0.0
-NOTIFICATIONS_POLL_INTERVAL = 30  # seconds
+def compute_wetness(window_int16):
+    """
+    Returns a wetness score 0.0–1.0 based on high-frequency energy ratio.
+    Wet/sloppy sounds (liquid, poop farts) have more broadband high-freq energy.
+    Dry farts are more tonal with lower high-freq energy.
+    """
+    spectrum = np.abs(np.fft.rfft(window_int16.astype(np.float32)))
+    total_energy = np.sum(spectrum ** 2) + 1e-10
+    # High frequencies = top 40% of spectrum
+    hf_start = int(len(spectrum) * 0.6)
+    hf_energy = np.sum(spectrum[hf_start:] ** 2)
+    return float(hf_energy / total_energy)
 
+
+# ---------------------------------------------------------------------------
+# Server reporting
+# ---------------------------------------------------------------------------
 GO_SERVER = "http://localhost"
 
 
@@ -104,6 +121,22 @@ def report_cry(confidence):
     _post_to_server("/api/cry", {"confidence": confidence}, "cry")
 
 
+def report_fart(confidence, wetness, is_wet):
+    """Report a fart detection to the Go server so the UI can show an indicator."""
+    _post_to_server("/api/fart", {"confidence": confidence, "wetness": wetness, "wet": is_wet}, "fart")
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+_notifications_enabled = True
+_notifications_last_checked = 0.0
+NOTIFICATIONS_POLL_INTERVAL = 30  # seconds
+
+_last_cry_notification = 0.0
+_last_fart_notification = 0.0
+
+
 def _refresh_notifications_enabled():
     """Fetch current notifications state from the Go server (cached, polled every 30s)."""
     global _notifications_enabled, _notifications_last_checked
@@ -118,37 +151,54 @@ def _refresh_notifications_enabled():
     _notifications_last_checked = now
 
 
-def notify(message):
-    global _last_notification
+def _send_ntfy(message, title, tags):
+    """Send a push notification via ntfy.sh. Returns True on success."""
+    if not NTFY_TOPIC:
+        log("WARNING: NTFY_TOPIC not set — skipping notification (set it in .env)")
+        return False
+    url = f"{NTFY_URL}/{NTFY_TOPIC}"
+    req = urllib.request.Request(url, data=message.encode("utf-8"), method="POST")
+    req.add_header("Title", title)
+    req.add_header("Priority", "high")
+    req.add_header("Tags", tags)
+    try:
+        with urllib.request.urlopen(req, timeout=5):
+            pass
+        log(f"  Notification sent to ntfy.sh/{NTFY_TOPIC}")
+        return True
+    except urllib.error.URLError as e:
+        log(f"  Notification failed: {e}", file=sys.stderr)
+        return False
+
+
+def notify_cry(message):
+    global _last_cry_notification
     now = time.time()
-
-    if now - _last_notification < COOLDOWN:
-        remaining = int(COOLDOWN - (now - _last_notification))
-        log(f"  (cooldown: {remaining}s remaining, skipping notification)")
+    if now - _last_cry_notification < CRY_COOLDOWN:
+        remaining = int(CRY_COOLDOWN - (now - _last_cry_notification))
+        log(f"  (cry cooldown: {remaining}s remaining, skipping notification)")
         return
-
     _refresh_notifications_enabled()
     if not _notifications_enabled:
         log("  (notifications disabled via UI, skipping)")
         return
+    if _send_ntfy(message, "Mayday!", "baby,rotating_light"):
+        _last_cry_notification = now
 
-    if not NTFY_TOPIC:
-        log("WARNING: NTFY_TOPIC not set — skipping notification (set it in .env)")
+
+def notify_fart(message):
+    global _last_fart_notification
+    now = time.time()
+    if now - _last_fart_notification < FART_COOLDOWN:
+        remaining = int(FART_COOLDOWN - (now - _last_fart_notification))
+        log(f"  (fart cooldown: {remaining}s remaining, skipping notification)")
         return
-
-    url = f"{NTFY_URL}/{NTFY_TOPIC}"
-    req = urllib.request.Request(url, data=message.encode("utf-8"), method="POST")
-    req.add_header("Title", "Mayday!")
-    req.add_header("Priority", "high")
-    req.add_header("Tags", "baby,rotating_light")
-
-    try:
-        with urllib.request.urlopen(req, timeout=5):
-            pass
-        _last_notification = now
-        log(f"  Notification sent to ntfy.sh/{NTFY_TOPIC}")
-    except urllib.error.URLError as e:
-        log(f"  Notification failed: {e}", file=sys.stderr)
+    _refresh_notifications_enabled()
+    if not _notifications_enabled:
+        log("  (notifications disabled via UI, skipping)")
+        return
+    if _send_ntfy(message, "Poop Alert!", "poop,baby"):
+        _last_fart_notification = now
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +233,9 @@ def main():
         sys.exit(1)
     report_detect_status("")  # clear any previous error
     log(f"Model loaded.")
-    log(f"Starting cry detection (threshold={THRESHOLD}, cooldown={COOLDOWN}s)")
+    log(f"Starting sound detection")
+    log(f"  cry:  threshold={CRY_THRESHOLD}, cooldown={CRY_COOLDOWN}s")
+    log(f"  fart: threshold={FART_THRESHOLD}, cooldown={FART_COOLDOWN}s, wetness_threshold={WETNESS_THRESHOLD}")
     log(f"Audio source: {RTSP_URL}")
     if not NTFY_TOPIC:
         log("WARNING: NTFY_TOPIC is not set — detections will be logged but not sent")
@@ -202,12 +254,22 @@ def main():
 
                 window = np.frombuffer(data, dtype=np.int16)
                 scores = classify(interpreter, input_idx, output_idx, window)
-                cry_score = float(scores[BABY_CRY_CLASS])
 
-                if cry_score >= THRESHOLD:
+                cry_score = float(scores[BABY_CRY_CLASS])
+                if cry_score >= CRY_THRESHOLD:
                     log(f"Cry detected! Score: {cry_score:.3f}")
                     report_cry(cry_score)
-                    notify(f"Crying detected (confidence: {cry_score:.0%})")
+                    notify_cry(f"Crying detected (confidence: {cry_score:.0%})")
+
+                fart_score = float(scores[FART_CLASS])
+                if fart_score >= FART_THRESHOLD:
+                    wetness = compute_wetness(window)
+                    is_wet = wetness >= WETNESS_THRESHOLD
+                    kind = "Wet fart (poop)" if is_wet else "Dry fart"
+                    log(f"{kind} detected! Score: {fart_score:.3f}, Wetness: {wetness:.3f}")
+                    report_fart(fart_score, wetness, is_wet)
+                    if is_wet:
+                        notify_fart(f"Poop detected (confidence: {fart_score:.0%})")
 
         except KeyboardInterrupt:
             proc.terminate()

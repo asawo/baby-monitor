@@ -27,6 +27,7 @@ func main() {
 	mux.HandleFunc("/api/logs", api.LogsHandler)
 	mux.HandleFunc("/api/notifications", api.NotificationsHandler)
 	mux.HandleFunc("/api/cry", api.CryHandler)
+	mux.HandleFunc("/api/fart", api.FartHandler)
 	mux.HandleFunc("/api/detect-status", api.DetectStatusHandler)
 	mux.Handle("/", http.FileServer(http.Dir("./server/web")))
 

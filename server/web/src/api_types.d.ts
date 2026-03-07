@@ -39,6 +39,25 @@ export interface CryResponse {
   confidence?: number /* float64 */;
 }
 /**
+ * FartRequest is the request body for POST /api/fart.
+ */
+export interface FartRequest {
+  confidence: number /* float64 */;
+  wetness: number /* float64 */;
+  wet: boolean;
+}
+/**
+ * FartResponse is the response for GET /api/fart.
+ * DetectedAt is null when no fart has been recorded yet.
+ */
+export interface FartResponse {
+  detected_at: string | null;
+  seconds_ago?: number /* int */;
+  confidence?: number /* float64 */;
+  wetness?: number /* float64 */;
+  is_wet?: boolean;
+}
+/**
  * DetectStatusRequest is the request body for POST /api/detect-status.
  */
 export interface DetectStatusRequest {

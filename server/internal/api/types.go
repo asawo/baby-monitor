@@ -32,6 +32,23 @@ type CryResponse struct {
 	Confidence *float64   `json:"confidence,omitempty"`
 }
 
+// FartRequest is the request body for POST /api/fart.
+type FartRequest struct {
+	Confidence float64 `json:"confidence"`
+	Wetness    float64 `json:"wetness"`
+	IsWet      bool    `json:"wet"`
+}
+
+// FartResponse is the response for GET /api/fart.
+// DetectedAt is null when no fart has been recorded yet.
+type FartResponse struct {
+	DetectedAt *time.Time `json:"detected_at"`
+	SecondsAgo *int       `json:"seconds_ago,omitempty"`
+	Confidence *float64   `json:"confidence,omitempty"`
+	Wetness    *float64   `json:"wetness,omitempty"`
+	IsWet      *bool      `json:"is_wet,omitempty"`
+}
+
 // DetectStatusRequest is the request body for POST /api/detect-status.
 type DetectStatusRequest struct {
 	Error string `json:"error"`

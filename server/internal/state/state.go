@@ -10,6 +10,10 @@ var (
 	notificationsEnabled = true
 	lastCryTime          time.Time
 	lastCryScore         float64
+	lastFartTime         time.Time
+	lastFartScore        float64
+	lastFartWetness      float64
+	lastFartIsWet        bool
 	detectErrMsg         string
 	detectErrTime        time.Time
 )
@@ -48,6 +52,31 @@ func GetCry() CryState {
 	mu.Lock()
 	defer mu.Unlock()
 	return CryState{Time: lastCryTime, Score: lastCryScore}
+}
+
+// SetFart records a fart detection event with the given confidence score, wetness score, and wet classification.
+func SetFart(confidence float64, wetness float64, isWet bool) {
+	mu.Lock()
+	defer mu.Unlock()
+	lastFartTime = time.Now()
+	lastFartScore = confidence
+	lastFartWetness = wetness
+	lastFartIsWet = isWet
+}
+
+// FartState holds the timestamp, confidence score, wetness score, and wet classification of the most recent fart detection.
+type FartState struct {
+	Time    time.Time
+	Score   float64
+	Wetness float64
+	IsWet   bool
+}
+
+// GetFart returns a snapshot of the most recent fart detection state.
+func GetFart() FartState {
+	mu.Lock()
+	defer mu.Unlock()
+	return FartState{Time: lastFartTime, Score: lastFartScore, Wetness: lastFartWetness, IsWet: lastFartIsWet}
 }
 
 // SetDetectError records a detector error message. Pass an empty string to clear the error.

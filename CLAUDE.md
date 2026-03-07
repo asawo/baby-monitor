@@ -57,7 +57,7 @@ server/
 services/
   control.sh                 # Start/stop/status all services
   stream/stream.sh           # FFmpeg capture
-  detect/detect_cry.py       # YAMNet ML detection
+  detect/sound_detection.py  # YAMNet ML cry + fart/poop detection
   detect/detect.sh           # Python wrapper for systemd
   detect/requirements.txt    # Python deps
 setup/

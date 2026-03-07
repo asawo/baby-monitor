@@ -102,6 +102,35 @@ func CryHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// FartHandler returns the most recent fart detection event (GET) or records a new one (POST).
+func FartHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var req FartRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			return
+		}
+		state.SetFart(req.Confidence, req.Wetness, req.IsWet)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	fart := state.GetFart()
+	w.Header().Set("Content-Type", "application/json")
+	if fart.Time.IsZero() {
+		json.NewEncoder(w).Encode(FartResponse{})
+		return
+	}
+	secsAgo := int(time.Since(fart.Time).Seconds())
+	json.NewEncoder(w).Encode(FartResponse{
+		DetectedAt: &fart.Time,
+		SecondsAgo: &secsAgo,
+		Confidence: &fart.Score,
+		Wetness:    &fart.Wetness,
+		IsWet:      &fart.IsWet,
+	})
+}
+
 // DetectStatusHandler returns the current detector error state (GET) or updates it (POST).
 func DetectStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
