@@ -28,7 +28,17 @@
       font-weight: 600;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      margin: 0 0 12px;
+      margin: 0;
+    }
+
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 12px;
+      flex-shrink: 0;
     }
 
     #status-dot {
@@ -39,6 +49,26 @@
       flex-shrink: 0;
     }
 
+    #status-btn {
+      background: none;
+      color: #888;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      width: auto;
+      height: auto;
+      transition: background 0.15s;
+    }
+
+    #status-btn:hover { background: #e5e5e3; }
+    #status-btn.ok { color: #16a34a; }
+    #status-btn.err { color: #dc2626; }
     #status-btn.ok #status-dot { background: #4ade80; }
     #status-btn.err #status-dot { background: #f87171; }
 
@@ -140,18 +170,28 @@
       display: block;
     }
 
+    #monitor-panel {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      border: 1.5px solid #e5e5e3;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
     #container {
       position: relative;
       width: 100%;
+      flex: 1;
       min-height: 0;
-      aspect-ratio: 16 / 9;
     }
 
     video {
       width: 100%;
       height: 100%;
       display: block;
-      border-radius: 4px;
       object-fit: contain;
       background: #000;
     }
@@ -168,21 +208,29 @@
       background: #000;
     }
 
-    #controls {
-      margin-top: 8px;
+    #audio-section {
+      background: #fff;
+      border-top: 1.5px solid #e5e5e3;
+      padding: 8px 12px 10px;
       display: flex;
-      gap: 8px;
-      width: 100%;
-      justify-content: flex-end;
-      align-items: stretch;
+      flex-direction: column;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    #audio-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #aaa;
     }
 
     #waveform {
-      flex: 1;
-      min-width: 0;
-      height: 40px;
-      background: #ddd;
-      border-radius: 4px;
+      width: 100%;
+      height: 36px;
+      background: #f0f0ee;
+      border-radius: 3px;
       display: block;
     }
 
@@ -249,12 +297,29 @@
       50% { opacity: 0.5; }
     }
 
-    #notify-btn, #status-btn {
-      background: #ddd;
+    #action-bar {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    #action-bar button {
+      flex: 1;
+      width: auto;
+      height: 40px;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    #notify-btn, #log-btn {
+      background: #e5e5e3;
       color: #111;
     }
 
-    #notify-btn:hover, #status-btn:hover { background: #ccc; }
+    #notify-btn:hover, #log-btn:hover { background: #d4d4d2; }
 
     #notify-btn.disabled {
       opacity: 0.45;
@@ -265,10 +330,11 @@
       font-size: 0.7rem;
       color: #f87171;
       width: 100%;
-      margin-top: 6px;
+      margin-top: 4px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      flex-shrink: 0;
     }
 
     #detect-error.visible { display: block; }
@@ -276,8 +342,6 @@
   </style>
 </head>
 <body>
-  <h1>May Monitor</h1>
-
   <div id="log-modal" onclick="closeLogModal()">
     <div id="log-card" onclick="event.stopPropagation()">
       <div id="log-card-header">
@@ -288,20 +352,37 @@
     </div>
   </div>
 
-  <div id="container">
-    <video id="video" autoplay playsinline muted></video>
-    <div id="cry-alert">Crying detected</div>
-    <div id="overlay">
-      <button id="overlayMuteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
-      <button id="overlayFsBtn" onclick="toggleFullscreen()" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
+  <div id="header">
+    <h1>May Monitor</h1>
+    <button id="status-btn" onclick="openLogModal()" aria-label="Service status">
+      <span id="status-dot"></span>
+      <span id="status-label">—</span>
+    </button>
+  </div>
+
+  <div id="monitor-panel">
+    <div id="container">
+      <video id="video" autoplay playsinline muted></video>
+      <div id="cry-alert">Crying detected</div>
+      <div id="overlay">
+        <button id="overlayMuteBtn" onclick="toggleMute()" aria-label="Unmute"><span class="material-icons">volume_off</span></button>
+        <button id="overlayFsBtn" onclick="toggleFullscreen()" aria-label="Fullscreen"><span class="material-icons">fullscreen</span></button>
+      </div>
+    </div>
+    <div id="audio-section">
+      <span id="audio-label">Audio Activity</span>
+      <canvas id="waveform"></canvas>
     </div>
   </div>
 
-  <div id="controls">
-    <canvas id="waveform"></canvas>
-    <button id="notify-btn" onclick="toggleNotifications()" aria-label="Disable notifications"><span class="material-icons">notifications</span></button>
-    <button id="status-btn" onclick="openLogModal()" aria-label="Service status">
-      <span id="status-dot"></span>
+  <div id="action-bar">
+    <button id="notify-btn" onclick="toggleNotifications()" aria-label="Disable notifications">
+      <span class="material-icons">notifications</span>
+      <span>Notifications</span>
+    </button>
+    <button id="log-btn" onclick="openLogModal()" aria-label="Service logs">
+      <span class="material-icons">list</span>
+      <span>Logs</span>
     </button>
   </div>
   <div id="detect-error"></div>
@@ -413,8 +494,12 @@
       streamStatus = status;
       switch (status) {
         case StreamStatus.RECONNECTING:
+          statusBtn.className = 'err';
+          updateStatusLabel('Reconnecting');
+          break;
         case StreamStatus.FAILED:
           statusBtn.className = 'err';
+          updateStatusLabel('Failed');
           break;
         // CONNECTED is handled by pollStatus on its next tick
       }
@@ -445,6 +530,7 @@
             clearTimeout(reconnectTimer);
             streamStatus = StreamStatus.CONNECTED;
             statusBtn.className = 'ok';
+            updateStatusLabel('Connected');
             pollStatus();
             break;
           case 'disconnected':
@@ -518,6 +604,10 @@
     // --- Status widget ---
     const statusBtn = document.getElementById('status-btn');
 
+    function updateStatusLabel(text) {
+      document.getElementById('status-label').textContent = text;
+    }
+
     async function pollStatus() {
       // Don't overwrite a stream-level error with a server-health indicator
       if (streamStatus === StreamStatus.RECONNECTING || streamStatus === StreamStatus.FAILED) return;
@@ -526,8 +616,10 @@
         const services = await res.json();
         const down = services.filter(s => !s.active);
         statusBtn.className = down.length === 0 ? 'ok' : 'err';
+        updateStatusLabel(down.length === 0 ? 'Connected' : 'Issue');
       } catch {
         statusBtn.className = 'err';
+        updateStatusLabel('Issue');
       }
     }
 
