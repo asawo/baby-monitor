@@ -1,10 +1,11 @@
-import { init as initWaveform } from './waveform.js';
-import { init as initStatus } from './status.js';
-import { init as initNotifications, toggleNotifications } from './notifications.js';
-import { init as initDetection } from './detection.js';
 import { toggleMute, toggleFullscreen } from './controls.js';
+import { init as initDetection } from './detection.js';
 import { openLogModal, closeLogModal } from './logs.js';
+import { init as initNotifications, toggleNotifications } from './notifications.js';
+import { init as initStatus } from './status.js';
+import { init as initTheme } from './theme.js';
 import { start } from './webrtc.js';
+import { init as initWaveform } from './waveform.js';
 
 const el = (id: string): HTMLElement => document.getElementById(id) as HTMLElement;
 
@@ -19,10 +20,11 @@ el('log-modal').addEventListener('click', closeLogModal);
 el('log-card').addEventListener('click', e => e.stopPropagation());
 
 // Initialize modules
-initWaveform();
-initStatus();
-initNotifications();
 initDetection();
+initNotifications();
+initStatus();
+initTheme();
+initWaveform();
 
 // not just init, as this is re-invoked on each reconnect
 start().catch(err => {
