@@ -49,3 +49,11 @@ logs:
 # Tail the Go HTTP server log
 logs-http:
     ssh {{PI}} "tail -f {{REMOTE}}/monitor.log"
+
+# Tail the cry detection log
+logs-detect:
+    ssh {{PI}} "tail -f {{REMOTE}}/detect.log"
+
+# Run cry detection unit tests on the Pi
+test:
+    ssh {{PI}} "{{REMOTE}}/venv/bin/python3 {{REMOTE}}/scripts/test_cry.py"

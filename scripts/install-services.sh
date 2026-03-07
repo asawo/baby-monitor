@@ -58,4 +58,24 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 WantedBy=multi-user.target
 UNIT
 
+sudo tee /etc/systemd/system/detect.service > /dev/null <<UNIT
+[Unit]
+Description=Baby Monitor Cry Detection
+After=network.target stream.service mediamtx.service
+
+[Service]
+User=${INSTALL_USER}
+Group=${INSTALL_USER}
+WorkingDirectory=${INSTALL_DIR}
+EnvironmentFile=${INSTALL_DIR}/.env
+ExecStart=${INSTALL_DIR}/scripts/detect.sh
+Restart=always
+RestartSec=5
+StandardOutput=append:${INSTALL_DIR}/detect.log
+StandardError=append:${INSTALL_DIR}/detect.log
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
 sudo systemctl daemon-reload
