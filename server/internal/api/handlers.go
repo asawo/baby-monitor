@@ -22,19 +22,29 @@ var logFiles = map[string]string{
 	"detect.service":       "monitor/logs/detect.log",
 }
 
+// Handlers holds shared dependencies for all API handlers.
+type Handlers struct {
+	state *state.State
+}
+
+// New returns a Handlers wired to the given State.
+func New(s *state.State) *Handlers {
+	return &Handlers{state: s}
+}
+
 // StatusHandler returns the systemd active state of each monitored service.
-func StatusHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	result := make([]ServiceStatus, len(services))
 	for i, svc := range services {
 		err := exec.Command("systemctl", "is-active", "--quiet", svc).Run()
 		result[i] = ServiceStatus{Name: svc, Active: err == nil}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 // LogsHandler returns the last 50 lines of each service log (file or journald).
-func LogsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) LogsHandler(w http.ResponseWriter, r *http.Request) {
 	home, _ := os.UserHomeDir()
 	result := make([]ServiceLog, 0, len(services))
 
@@ -60,42 +70,42 @@ func LogsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 // NotificationsHandler returns the current notification state (GET) or toggles it (POST).
-func NotificationsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) NotificationsHandler(w http.ResponseWriter, r *http.Request) {
 	var enabled bool
 	if r.Method == http.MethodPost {
-		enabled = state.ToggleNotifications()
+		enabled = h.state.ToggleNotifications()
 	} else {
-		enabled = state.GetNotificationsEnabled()
+		enabled = h.state.GetNotificationsEnabled()
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(NotificationsResponse{Enabled: enabled})
+	_ = json.NewEncoder(w).Encode(NotificationsResponse{Enabled: enabled})
 }
 
 // CryHandler returns the most recent cry detection event (GET) or records a new one (POST).
-func CryHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) CryHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var req CryRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
-		state.SetCry(req.Confidence)
+		h.state.SetCry(req.Confidence)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	cry := state.GetCry()
+	cry := h.state.GetCry()
 	w.Header().Set("Content-Type", "application/json")
 	if cry.Time.IsZero() {
-		json.NewEncoder(w).Encode(CryResponse{})
+		_ = json.NewEncoder(w).Encode(CryResponse{})
 		return
 	}
 	secsAgo := int(time.Since(cry.Time).Seconds())
-	json.NewEncoder(w).Encode(CryResponse{
+	_ = json.NewEncoder(w).Encode(CryResponse{
 		DetectedAt: &cry.Time,
 		SecondsAgo: &secsAgo,
 		Confidence: &cry.Score,
@@ -103,26 +113,26 @@ func CryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // FartHandler returns the most recent fart detection event (GET) or records a new one (POST).
-func FartHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) FartHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var req FartRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
-		state.SetFart(req.Confidence, req.Wetness, req.IsWet)
+		h.state.SetFart(req.Confidence, req.Wetness, req.IsWet)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	fart := state.GetFart()
+	fart := h.state.GetFart()
 	w.Header().Set("Content-Type", "application/json")
 	if fart.Time.IsZero() {
-		json.NewEncoder(w).Encode(FartResponse{})
+		_ = json.NewEncoder(w).Encode(FartResponse{})
 		return
 	}
 	secsAgo := int(time.Since(fart.Time).Seconds())
-	json.NewEncoder(w).Encode(FartResponse{
+	_ = json.NewEncoder(w).Encode(FartResponse{
 		DetectedAt: &fart.Time,
 		SecondsAgo: &secsAgo,
 		Confidence: &fart.Score,
@@ -132,26 +142,26 @@ func FartHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // DetectStatusHandler returns the current detector error state (GET) or updates it (POST).
-func DetectStatusHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) DetectStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var req DetectStatusRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
-		state.SetDetectError(req.Error)
+		h.state.SetDetectError(req.Error)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	det := state.GetDetectError()
+	det := h.state.GetDetectError()
 	w.Header().Set("Content-Type", "application/json")
 	if det.Msg == "" {
-		json.NewEncoder(w).Encode(DetectStatusResponse{})
+		_ = json.NewEncoder(w).Encode(DetectStatusResponse{})
 		return
 	}
 	secsAgo := int(time.Since(det.Time).Seconds())
-	json.NewEncoder(w).Encode(DetectStatusResponse{
+	_ = json.NewEncoder(w).Encode(DetectStatusResponse{
 		Error:      &det.Msg,
 		SecondsAgo: &secsAgo,
 	})

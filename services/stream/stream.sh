@@ -10,7 +10,7 @@ ffmpeg -hide_banner -loglevel warning \
   -f v4l2 -framerate 15 -video_size 1280x720 -i "$VIDEO_DEV" \
   -f wav -i - \
   -vf fps=15,format=yuv420p \
-  -c:v libx264 -preset veryfast -tune zerolatency -g 15 \
+  -c:v h264_v4l2m2m -g 15 \
   -b:v 1500k \
   -c:a libopus -b:a 96k -ar "$AUDIO_RATE" -ac 1 \
   -f rtsp rtsp://localhost:8554/baby 2>&1 | \
