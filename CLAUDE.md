@@ -48,18 +48,26 @@ Browser:
 ```
 server/
   cmd/main.go                # Go HTTP server entry point + routing
+  cmd/logger.go              # Logging setup
+  cmd/middleware.go          # HTTP middleware
   internal/api/              # API handler functions + types
   internal/state/            # Mutex-protected shared state
   web/                       # Frontend static assets (served by Go)
     index.html
     css/style.css
-    js/app.js
+    src/                     # TypeScript source (compiled to dist/ by tsc)
+      app.ts, waveform.ts, webrtc.ts, controls.ts,
+      detection.ts, logs.ts, notifications.ts,
+      status.ts, theme.ts
+    dist/                    # Compiled JS output
 services/
   control.sh                 # Start/stop/status all services
   stream/stream.sh           # FFmpeg capture
   detect/detect_cry.py       # YAMNet ML detection
   detect/detect.sh           # Python wrapper for systemd
   detect/requirements.txt    # Python deps
+  detect/test_cry.py         # Manual cry detection test script
+  detect/README.md           # Detect service docs
 setup/
   install.sh                 # Full Pi setup
   systemd.sh                 # Systemd unit generator
