@@ -26,20 +26,20 @@ var logFiles = map[string]string{
 	"detect.service":       "monitor/logs/detect.log",
 }
 
-// Handlers holds shared dependencies for all API handlers.
-type Handlers struct {
+// Handler holds shared dependencies for all API handlers.
+type Handler struct {
 	state  *state.State
 	logger *log.Logger
 }
 
-// New returns a Handlers wired to the given State and logger.
-func New(s *state.State, l *log.Logger) *Handlers {
-	return &Handlers{state: s, logger: l}
+// New returns a Handler wired to the given State and logger.
+func New(s *state.State, l *log.Logger) *Handler {
+	return &Handler{state: s, logger: l}
 }
 
 // StatusHandler returns the systemd active state of each monitored service.
 // Checks run in parallel to minimise latency.
-func (h *Handlers) StatusHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	result := make([]ServiceStatus, len(services))
 	var wg sync.WaitGroup
 	for i, svc := range services {
@@ -59,7 +59,7 @@ func (h *Handlers) StatusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // LogsHandler returns the last 50 lines of each service log (file or journald).
-func (h *Handlers) LogsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LogsHandler(w http.ResponseWriter, r *http.Request) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		h.logger.Printf("api: logs: home dir: %v", err)
@@ -142,7 +142,7 @@ func tailFile(path string, n int) (string, error) {
 }
 
 // GetNotificationsHandler returns the current notification enabled state.
-func (h *Handlers) GetNotificationsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetNotificationsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(NotificationsResponse{Enabled: h.state.GetNotificationsEnabled()}); err != nil {
 		h.logger.Printf("api: notifications encode: %v", err)
@@ -150,7 +150,7 @@ func (h *Handlers) GetNotificationsHandler(w http.ResponseWriter, r *http.Reques
 }
 
 // ToggleNotificationsHandler flips the notification enabled state and returns the new value.
-func (h *Handlers) ToggleNotificationsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ToggleNotificationsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(NotificationsResponse{Enabled: h.state.ToggleNotifications()}); err != nil {
 		h.logger.Printf("api: notifications encode: %v", err)
@@ -158,7 +158,7 @@ func (h *Handlers) ToggleNotificationsHandler(w http.ResponseWriter, r *http.Req
 }
 
 // GetCryHandler returns the most recent cry detection event.
-func (h *Handlers) GetCryHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetCryHandler(w http.ResponseWriter, r *http.Request) {
 	cry := h.state.GetCry()
 	w.Header().Set("Content-Type", "application/json")
 	if cry.Time.IsZero() {
@@ -178,7 +178,7 @@ func (h *Handlers) GetCryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // RecordCryHandler records a new cry detection event.
-func (h *Handlers) RecordCryHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RecordCryHandler(w http.ResponseWriter, r *http.Request) {
 	var req CryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
@@ -189,7 +189,7 @@ func (h *Handlers) RecordCryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetFartHandler returns the most recent fart detection event.
-func (h *Handlers) GetFartHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetFartHandler(w http.ResponseWriter, r *http.Request) {
 	fart := h.state.GetFart()
 	w.Header().Set("Content-Type", "application/json")
 	if fart.Time.IsZero() {
@@ -211,7 +211,7 @@ func (h *Handlers) GetFartHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // RecordFartHandler records a new fart detection event.
-func (h *Handlers) RecordFartHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RecordFartHandler(w http.ResponseWriter, r *http.Request) {
 	var req FartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
@@ -222,7 +222,7 @@ func (h *Handlers) RecordFartHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // EventsHandler returns the audit log of recent detection events.
-func (h *Handlers) EventsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) EventsHandler(w http.ResponseWriter, r *http.Request) {
 	events, err := h.state.GetAuditLog()
 	if err != nil {
 		h.logger.Printf("api: events: %v", err)
@@ -236,7 +236,7 @@ func (h *Handlers) EventsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetDetectStatusHandler returns the current detector error state.
-func (h *Handlers) GetDetectStatusHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetDetectStatusHandler(w http.ResponseWriter, r *http.Request) {
 	det := h.state.GetDetectError()
 	w.Header().Set("Content-Type", "application/json")
 	if det.Msg == "" {
@@ -255,7 +255,7 @@ func (h *Handlers) GetDetectStatusHandler(w http.ResponseWriter, r *http.Request
 }
 
 // SetDetectStatusHandler updates the detector error state.
-func (h *Handlers) SetDetectStatusHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SetDetectStatusHandler(w http.ResponseWriter, r *http.Request) {
 	var req DetectStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)

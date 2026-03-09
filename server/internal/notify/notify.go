@@ -26,10 +26,10 @@ func New(socketPath string, watchdogUsec int64, logger *log.Logger) *Notifier {
 	}
 }
 
-// Notify sends a state string to the systemd notification socket.
+// Notify sends a message to the systemd notification socket.
 // It is a no-op if socketPath was empty at construction time.
 // Handles both filesystem and abstract (@ prefix) socket paths.
-func (n *Notifier) Notify(state string) error {
+func (n *Notifier) Notify(msg string) error {
 	if n.socketPath == "" {
 		return nil
 	}
@@ -47,7 +47,7 @@ func (n *Notifier) Notify(state string) error {
 			n.logger.Printf("notify: close socket: %v", err)
 		}
 	}()
-	_, err = conn.Write([]byte(state))
+	_, err = conn.Write([]byte(msg))
 	return err
 }
 
