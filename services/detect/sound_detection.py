@@ -3,8 +3,8 @@
 Baby sound detection using YAMNet TFLite model.
 
 Detects baby cries and farts/poops from the RTSP audio stream. Classifies
-each ~0.975s window with YAMNet and applies spectral analysis to distinguish
-wet farts (poop) from dry farts. Sends push notifications via ntfy.sh.
+each ~0.975s window with YAMNet. Wet farts (poop) are distinguished from dry
+farts by co-activation of liquid-related YAMNet classes in the same window.
 
 Environment variables:
   NTFY_TOPIC        (required) Unique ntfy.sh topic
@@ -13,11 +13,14 @@ Environment variables:
   CRY_COOLDOWN      (default: 120) Minimum seconds between cry notifications
   FART_THRESHOLD    (default: 0.3) Fart confidence score threshold (0.0–1.0)
   FART_COOLDOWN     (default: 120) Minimum seconds between fart notifications
-  WETNESS_THRESHOLD (default: 0.4) High-freq energy ratio to classify as wet/poop
+  WETNESS_THRESHOLD (default: 0.4)  Min high-frequency energy ratio (above WETNESS_HF_CUTOFF) to classify as poop
+  WETNESS_HF_CUTOFF (default: 1000) Frequency cutoff in Hz separating dry (low) from wet (high) fart energy
+  DEBUG_AUDIO       (default: 0) Set to 1 to log top 5 YAMNet class scores per window
   RTSP_URL          (default: rtsp://localhost:8554/baby) Audio source
   MODEL_PATH        (default: ~/monitor/models/yamnet.tflite)
 """
 
+import csv
 import json
 import os
 import sys
@@ -42,7 +45,9 @@ CRY_THRESHOLD = float(os.environ.get("CRY_THRESHOLD", "0.3"))
 CRY_COOLDOWN = int(os.environ.get("CRY_COOLDOWN", "120"))
 FART_THRESHOLD = float(os.environ.get("FART_THRESHOLD", "0.3"))
 FART_COOLDOWN = int(os.environ.get("FART_COOLDOWN", "120"))
-WETNESS_THRESHOLD = float(os.environ.get("WETNESS_THRESHOLD", "0.4"))
+WETNESS_THRESHOLD = float(os.environ.get("WETNESS_THRESHOLD", "0.5"))
+WETNESS_HF_CUTOFF = float(os.environ.get("WETNESS_HF_CUTOFF", "1000"))
+DEBUG_AUDIO = os.environ.get("DEBUG_AUDIO", "0") == "1"
 RTSP_URL = os.environ.get("RTSP_URL", "rtsp://localhost:8554/baby")
 
 _default_model = os.path.join(os.path.dirname(__file__), "..", "..", "models", "yamnet.tflite")
@@ -55,8 +60,58 @@ BYTES_PER_SAMPLE = 2  # int16
 
 # YAMNet class indices (AudioSet ontology)
 # Verify against yamnet_class_map.csv if model is updated.
-BABY_CRY_CLASS = 20   # "Baby cry, infant cry"
-FART_CLASS = 369      # "Fart"
+BABY_CRY_CLASS = 20  # "Baby cry, infant cry" (AudioSet /m/07p6fkm)
+FART_CLASS = 55      # "Fart" (AudioSet /m/02_nn)
+
+
+# ---------------------------------------------------------------------------
+# Wetness detection (spectral analysis)
+# ---------------------------------------------------------------------------
+_FFT_SIZE = 1024                          # ~64ms frame at 16kHz
+_HOP_SIZE = _FFT_SIZE // 2               # 50% overlap
+_HANN = np.hanning(_FFT_SIZE)
+_FREQS = np.fft.rfftfreq(_FFT_SIZE, d=1.0 / SAMPLE_RATE)
+
+
+def compute_wetness(window_int16):
+    """Return the peak high-frequency energy ratio across overlapping frames.
+
+    Splits the audio window into 1024-sample Hann-windowed frames with 50%
+    overlap, computes the fraction of energy above WETNESS_HF_CUTOFF Hz for
+    each frame, and returns the maximum. Using the peak (not mean) ensures a
+    wet event spanning only part of the window isn't diluted by ambient silence.
+    """
+    audio = window_int16.astype(np.float32)
+    high_mask = _FREQS >= WETNESS_HF_CUTOFF
+    peak = 0.0
+    for start in range(0, len(audio) - _FFT_SIZE + 1, _HOP_SIZE):
+        frame = audio[start:start + _FFT_SIZE] * _HANN
+        spectrum = np.abs(np.fft.rfft(frame))
+        total = np.sum(spectrum ** 2) + 1e-10
+        ratio = float(np.sum(spectrum[high_mask] ** 2) / total)
+        if ratio > peak:
+            peak = ratio
+    return peak
+
+
+# ---------------------------------------------------------------------------
+# Class name map (loaded from yamnet_class_map.csv alongside the model)
+# ---------------------------------------------------------------------------
+def _load_class_names(model_path):
+    csv_path = os.path.join(os.path.dirname(model_path), "yamnet_class_map.csv")
+    names = {}
+    try:
+        with open(csv_path, newline="") as f:
+            for row in csv.DictReader(f):
+                names[int(row["index"])] = row["display_name"]
+    except Exception:
+        pass
+    return names
+
+
+def _class_label(names, idx):
+    return names.get(idx, f"class {idx}")
+
 
 # ---------------------------------------------------------------------------
 # Model loading
@@ -78,20 +133,6 @@ def classify(interpreter, input_idx, output_idx, window_int16):
     interpreter.invoke()
     scores = interpreter.get_tensor(output_idx)  # shape: (frames, 521)
     return np.mean(scores, axis=0)  # shape: (521,)
-
-
-def compute_wetness(window_int16):
-    """
-    Returns a wetness score 0.0–1.0 based on high-frequency energy ratio.
-    Wet/sloppy sounds (liquid, poop farts) have more broadband high-freq energy.
-    Dry farts are more tonal with lower high-freq energy.
-    """
-    spectrum = np.abs(np.fft.rfft(window_int16.astype(np.float32)))
-    total_energy = np.sum(spectrum ** 2) + 1e-10
-    # High frequencies = top 40% of spectrum
-    hf_start = int(len(spectrum) * 0.6)
-    hf_energy = np.sum(spectrum[hf_start:] ** 2)
-    return float(hf_energy / total_energy)
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +264,9 @@ def open_ffmpeg_stream(rtsp_url):
 # Main loop
 # ---------------------------------------------------------------------------
 def main():
+    class_names = _load_class_names(MODEL_PATH)
+    if class_names:
+        log(f"Loaded {len(class_names)} class names from yamnet_class_map.csv")
     log(f"Loading model: {MODEL_PATH}")
     try:
         interpreter, input_idx, output_idx = load_model(MODEL_PATH)
@@ -235,7 +279,7 @@ def main():
     log(f"Model loaded.")
     log(f"Starting sound detection")
     log(f"  cry:  threshold={CRY_THRESHOLD}, cooldown={CRY_COOLDOWN}s")
-    log(f"  fart: threshold={FART_THRESHOLD}, cooldown={FART_COOLDOWN}s, wetness_threshold={WETNESS_THRESHOLD}")
+    log(f"  fart: threshold={FART_THRESHOLD}, cooldown={FART_COOLDOWN}s, wetness_threshold={WETNESS_THRESHOLD}, hf_cutoff={WETNESS_HF_CUTOFF}Hz")
     log(f"Audio source: {RTSP_URL}")
     if not NTFY_TOPIC:
         log("WARNING: NTFY_TOPIC is not set — detections will be logged but not sent")
@@ -255,6 +299,10 @@ def main():
                 window = np.frombuffer(data, dtype=np.int16)
                 scores = classify(interpreter, input_idx, output_idx, window)
 
+                if DEBUG_AUDIO:
+                    top5 = np.argsort(scores)[-5:][::-1]
+                    log("Top scores: " + ", ".join(f"{_class_label(class_names, i)}={scores[i]:.3f}" for i in top5))
+
                 cry_score = float(scores[BABY_CRY_CLASS])
                 if cry_score >= CRY_THRESHOLD:
                     log(f"Cry detected! Score: {cry_score:.3f}")
@@ -263,11 +311,11 @@ def main():
 
                 fart_score = float(scores[FART_CLASS])
                 if fart_score >= FART_THRESHOLD:
-                    wetness = compute_wetness(window)
-                    is_wet = wetness >= WETNESS_THRESHOLD
+                    wet_score = compute_wetness(window)
+                    is_wet = wet_score >= WETNESS_THRESHOLD
                     kind = "Wet fart (poop)" if is_wet else "Dry fart"
-                    log(f"{kind} detected! Score: {fart_score:.3f}, Wetness: {wetness:.3f}")
-                    report_fart(fart_score, wetness, is_wet)
+                    log(f"{kind} detected! Fart: {fart_score:.3f}, Wet score: {wet_score:.3f}")
+                    report_fart(fart_score, wet_score, is_wet)
                     if is_wet:
                         notify_fart(f"Poop detected (confidence: {fart_score:.0%})")
 

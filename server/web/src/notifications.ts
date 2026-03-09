@@ -12,7 +12,7 @@ function updateNotifyBtn(enabled: boolean) {
 
 async function loadNotificationsState() {
   try {
-    const res = await fetch('/api/notifications');
+    const res = await fetch('/api/notifications', { cache: 'no-store' });
     const data: NotificationsResponse = await res.json();
     updateNotifyBtn(data.enabled);
   } catch {}
@@ -28,4 +28,5 @@ export async function toggleNotifications() {
 
 export function init() {
   loadNotificationsState();
+  setInterval(loadNotificationsState, 10_000);
 }

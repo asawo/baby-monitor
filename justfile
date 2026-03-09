@@ -61,6 +61,10 @@ start:
 stop:
     ssh {{PI}} "{{REMOTE}}/services/control.sh stop"
 
+# Restart all services on the Pi
+restart:
+    ssh {{PI}} "{{REMOTE}}/services/control.sh stop && {{REMOTE}}/services/control.sh start" < /dev/null
+
 # Show systemd status for all services
 status:
     ssh {{PI}} "{{REMOTE}}/services/control.sh status"
@@ -73,7 +77,7 @@ logs:
 logs-http:
     ssh {{PI}} "tail -f {{REMOTE}}/logs/monitor.log"
 
-# Tail the cry detection log
+# Tail the sound detection log
 logs-detect:
     ssh {{PI}} "tail -f {{REMOTE}}/logs/detect.log"
 
