@@ -10,8 +10,9 @@ import (
 
 // State holds all in-memory detection state and writes through to a backing store on mutation.
 type State struct {
-	mu                   sync.Mutex
+	mu                   sync.RWMutex
 	db                   *store.DB
+	logger               *log.Logger
 	notificationsEnabled bool
 	lastCryTime          time.Time
 	lastCryScore         float64
@@ -24,9 +25,10 @@ type State struct {
 }
 
 // New creates a State, loading any previously persisted values from db.
-func New(db *store.DB) *State {
+func New(db *store.DB, log *log.Logger) *State {
 	s := &State{
 		db:                   db,
+		logger:               log,
 		notificationsEnabled: true,
 	}
 
@@ -57,8 +59,8 @@ func New(db *store.DB) *State {
 
 // GetNotificationsEnabled returns whether push notifications are currently enabled.
 func (s *State) GetNotificationsEnabled() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.notificationsEnabled
 }
 
@@ -68,7 +70,7 @@ func (s *State) ToggleNotifications() bool {
 	defer s.mu.Unlock()
 	s.notificationsEnabled = !s.notificationsEnabled
 	if err := s.db.SetNotificationsEnabled(s.notificationsEnabled); err != nil {
-		log.Printf("state: persist notifications: %v", err)
+		s.logger.Printf("state: persist notifications: %v", err)
 	}
 	return s.notificationsEnabled
 }
@@ -80,7 +82,7 @@ func (s *State) SetCry(confidence float64) {
 	s.lastCryTime = time.Now()
 	s.lastCryScore = confidence
 	if err := s.db.SetCry(store.CryRecord{Time: s.lastCryTime, Score: s.lastCryScore}); err != nil {
-		log.Printf("state: persist cry: %v", err)
+		s.logger.Printf("state: persist cry: %v", err)
 	}
 }
 
@@ -92,8 +94,8 @@ type CryState struct {
 
 // GetCry returns a snapshot of the most recent cry detection state.
 func (s *State) GetCry() CryState {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return CryState{Time: s.lastCryTime, Score: s.lastCryScore}
 }
 
@@ -111,7 +113,7 @@ func (s *State) SetFart(confidence float64, wetness float64, isWet bool) {
 		Wetness: s.lastFartWetness,
 		IsWet:   s.lastFartIsWet,
 	}); err != nil {
-		log.Printf("state: persist fart: %v", err)
+		s.logger.Printf("state: persist fart: %v", err)
 	}
 }
 
@@ -125,8 +127,8 @@ type FartState struct {
 
 // GetFart returns a snapshot of the most recent fart detection state.
 func (s *State) GetFart() FartState {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return FartState{Time: s.lastFartTime, Score: s.lastFartScore, Wetness: s.lastFartWetness, IsWet: s.lastFartIsWet}
 }
 
@@ -150,7 +152,12 @@ type DetectErrorState struct {
 
 // GetDetectError returns a snapshot of the most recent detector error state.
 func (s *State) GetDetectError() DetectErrorState {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return DetectErrorState{Msg: s.detectErrMsg, Time: s.detectErrTime}
+}
+
+// GetAuditLog returns the most recent detection events from the backing store.
+func (s *State) GetAuditLog() ([]store.AuditEvent, error) {
+	return s.db.GetAuditLog()
 }

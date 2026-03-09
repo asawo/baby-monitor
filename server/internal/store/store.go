@@ -23,17 +23,18 @@ const maxAuditEntries = 50
 
 // DB wraps a BoltDB instance with typed accessors for monitor state.
 type DB struct {
-	bolt *bbolt.DB
+	db     *bbolt.DB
+	logger *log.Logger
 }
 
 // New opens (or creates) the BoltDB file at path and initializes buckets.
 // Uses a 1s timeout to avoid hanging if the file is already locked.
-func New(path string) (*DB, error) {
-	bolt, err := bbolt.Open(path, 0600, &bbolt.Options{Timeout: time.Second})
+func New(path string, log *log.Logger) (*DB, error) {
+	bdb, err := bbolt.Open(path, 0600, &bbolt.Options{Timeout: time.Second})
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
-	err = bolt.Update(func(tx *bbolt.Tx) error {
+	err = bdb.Update(func(tx *bbolt.Tx) error {
 		if _, err := tx.CreateBucketIfNotExists(bucketState); err != nil {
 			return err
 		}
@@ -43,40 +44,39 @@ func New(path string) (*DB, error) {
 		return nil
 	})
 	if err != nil {
-		_ = bolt.Close()
+		_ = bdb.Close()
 		return nil, fmt.Errorf("init buckets: %w", err)
 	}
-	return &DB{bolt: bolt}, nil
+	return &DB{db: bdb, logger: log}, nil
 }
 
 // Close closes the database.
 func (d *DB) Close() error {
-	return d.bolt.Close()
+	return d.db.Close()
 }
 
 // GetNotificationsEnabled returns the persisted value, defaulting to true if not yet set.
 func (d *DB) GetNotificationsEnabled() (bool, error) {
 	var result bool
-	err := d.bolt.View(func(tx *bbolt.Tx) error {
+	err := d.db.View(func(tx *bbolt.Tx) error {
 		v := tx.Bucket(bucketState).Get(keyNotifications)
 		if v == nil {
 			result = true // match the in-memory default
 			return nil
 		}
-		result = string(v) == "true"
-		return nil
+		return json.Unmarshal(v, &result)
 	})
 	return result, err
 }
 
 // SetNotificationsEnabled persists the notifications toggle state.
 func (d *DB) SetNotificationsEnabled(v bool) error {
-	val := []byte("false")
-	if v {
-		val = []byte("true")
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
 	}
-	return d.bolt.Update(func(tx *bbolt.Tx) error {
-		return tx.Bucket(bucketState).Put(keyNotifications, val)
+	return d.db.Update(func(tx *bbolt.Tx) error {
+		return tx.Bucket(bucketState).Put(keyNotifications, data)
 	})
 }
 
@@ -89,7 +89,7 @@ type CryRecord struct {
 // GetCry returns the last persisted cry record, or a zero-value CryRecord if none.
 func (d *DB) GetCry() (CryRecord, error) {
 	var r CryRecord
-	err := d.bolt.View(func(tx *bbolt.Tx) error {
+	err := d.db.View(func(tx *bbolt.Tx) error {
 		v := tx.Bucket(bucketState).Get(keyLastCry)
 		if v == nil {
 			return nil
@@ -101,7 +101,7 @@ func (d *DB) GetCry() (CryRecord, error) {
 
 // SetCry persists a cry event and appends an audit entry.
 func (d *DB) SetCry(r CryRecord) error {
-	return d.bolt.Update(func(tx *bbolt.Tx) error {
+	return d.db.Update(func(tx *bbolt.Tx) error {
 		data, err := json.Marshal(r)
 		if err != nil {
 			return err
@@ -128,7 +128,7 @@ type FartRecord struct {
 // GetFart returns the last persisted fart record, or a zero-value FartRecord if none.
 func (d *DB) GetFart() (FartRecord, error) {
 	var r FartRecord
-	err := d.bolt.View(func(tx *bbolt.Tx) error {
+	err := d.db.View(func(tx *bbolt.Tx) error {
 		v := tx.Bucket(bucketState).Get(keyLastFart)
 		if v == nil {
 			return nil
@@ -140,7 +140,7 @@ func (d *DB) GetFart() (FartRecord, error) {
 
 // SetFart persists a fart event and appends an audit entry.
 func (d *DB) SetFart(r FartRecord) error {
-	return d.bolt.Update(func(tx *bbolt.Tx) error {
+	return d.db.Update(func(tx *bbolt.Tx) error {
 		data, err := json.Marshal(r)
 		if err != nil {
 			return err
@@ -167,16 +167,27 @@ type AuditEvent struct {
 	IsWet   bool      `json:"is_wet,omitempty"`
 }
 
-// GetAuditLog returns up to 50 most recent audit events in chronological order.
+// GetAuditLog returns up to maxAuditEntries most recent audit events in chronological order.
 func (d *DB) GetAuditLog() ([]AuditEvent, error) {
 	var events []AuditEvent
-	err := d.bolt.View(func(tx *bbolt.Tx) error {
+	err := d.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(bucketAudit)
 		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
+		// Seek to last entry and walk backwards to collect up to maxAuditEntries.
+		raw := make([][]byte, 0, maxAuditEntries)
+		for k, v := c.Last(); k != nil && len(raw) < maxAuditEntries; k, v = c.Prev() {
+			cp := make([]byte, len(v))
+			copy(cp, v)
+			raw = append(raw, cp)
+		}
+		// Reverse to restore chronological order.
+		for i, j := 0, len(raw)-1; i < j; i, j = i+1, j-1 {
+			raw[i], raw[j] = raw[j], raw[i]
+		}
+		for _, v := range raw {
 			var e AuditEvent
 			if err := json.Unmarshal(v, &e); err != nil {
-				log.Printf("store: audit unmarshal: %v", err)
+				d.logger.Printf("store: audit unmarshal: %v", err)
 				continue
 			}
 			events = append(events, e)
@@ -203,8 +214,10 @@ func appendAudit(tx *bbolt.Tx, e AuditEvent) error {
 	if err := b.Put(key, data); err != nil {
 		return err
 	}
-	// Prune oldest entry if over limit.
-	if b.Stats().KeyN > maxAuditEntries {
+	// Prune oldest entry if over limit. Stats().KeyN reflects the count before
+	// the current transaction commits, so the actual count after Put is KeyN+1;
+	// compare with >= to catch the moment we hit the limit.
+	if b.Stats().KeyN >= maxAuditEntries {
 		k, _ := b.Cursor().First()
 		if k != nil {
 			return b.Delete(k)

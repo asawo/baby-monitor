@@ -1,63 +1,75 @@
 package main
 
 import (
+	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"babymonitor/server/internal/api"
 	"babymonitor/server/internal/config"
+	"babymonitor/server/internal/middleware"
 	"babymonitor/server/internal/notify"
 	"babymonitor/server/internal/state"
 	"babymonitor/server/internal/store"
 )
 
 func main() {
+	logger := log.New(os.Stderr, "", log.Ldate|log.Ltime)
+
 	cfg, err := config.Load()
 	if err != nil {
-		logFatal("config: %v", err)
+		logger.Fatalf("config: %v", err)
 	}
 
-	db, err := store.New(cfg.DBPath)
+	db, err := store.New(cfg.DBPath, logger)
 	if err != nil {
-		logFatal("store: %v", err)
+		logger.Fatalf("store: %v", err)
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			logf("store close: %v", err)
+			logger.Printf("store close: %v", err)
 		}
 	}()
 
-	s := state.New(db)
-	h := api.New(s)
-	ntfy := notify.New(cfg.NotifySocket, cfg.WatchdogUsec)
+	s := state.New(db, logger)
+	h := api.New(s, logger)
+	ntfy := notify.New(cfg.NotifySocket, cfg.WatchdogUsec, logger)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
+		if _, err := w.Write([]byte(`{"status":"ok"}`)); err != nil {
+			logger.Printf("healthz write: %v", err)
+		}
 	})
-	mux.HandleFunc("/api/status", h.StatusHandler)
-	mux.HandleFunc("/api/logs", h.LogsHandler)
-	mux.HandleFunc("/api/notifications", h.NotificationsHandler)
-	mux.HandleFunc("/api/cry", h.CryHandler)
-	mux.HandleFunc("/api/fart", h.FartHandler)
-	mux.HandleFunc("/api/detect-status", h.DetectStatusHandler)
-	mux.Handle("/", noCacheMiddleware(http.FileServer(http.Dir("./server/web"))))
+	mux.HandleFunc("GET /api/status", h.StatusHandler)
+	mux.HandleFunc("GET /api/logs", h.LogsHandler)
+	mux.HandleFunc("GET /api/notifications", h.GetNotificationsHandler)
+	mux.HandleFunc("POST /api/notifications", h.ToggleNotificationsHandler)
+	mux.HandleFunc("GET /api/cry", h.GetCryHandler)
+	mux.HandleFunc("POST /api/cry", h.RecordCryHandler)
+	mux.HandleFunc("GET /api/fart", h.GetFartHandler)
+	mux.HandleFunc("POST /api/fart", h.RecordFartHandler)
+	mux.HandleFunc("GET /api/detect-status", h.GetDetectStatusHandler)
+	mux.HandleFunc("POST /api/detect-status", h.SetDetectStatusHandler)
+	mux.HandleFunc("GET /api/events", h.EventsHandler)
+	mux.Handle("/", middleware.NoCache(http.FileServer(http.Dir("./server/web"))))
 
 	addr := ":80"
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		logFatal("listen: %v", err)
+		logger.Fatalf("listen: %v", err)
 	}
 
-	logf("Serving on http://0.0.0.0%s", addr)
+	logger.Printf("Serving on http://0.0.0.0%s", addr)
 
 	if err := ntfy.Notify("READY=1"); err != nil {
-		logf("sd_notify: %v", err)
+		logger.Printf("sd_notify: %v", err)
 	}
 	ntfy.StartWatchdog()
 
-	if err := http.Serve(ln, privateNetworkMiddleware(mux)); err != nil {
-		logFatal("%v", err)
+	if err := http.Serve(ln, middleware.PrivateNetwork(mux)); err != nil {
+		logger.Fatalf("%v", err)
 	}
 }

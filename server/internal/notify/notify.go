@@ -13,14 +13,16 @@ import (
 type Notifier struct {
 	socketPath   string
 	watchdogUsec int64
+	logger       *log.Logger
 }
 
-// New returns a Notifier configured with the given socket path and watchdog interval.
+// New returns a Notifier configured with the given socket path, watchdog interval, and logger.
 // Pass the values from config.Config.NotifySocket and config.Config.WatchdogUsec.
-func New(socketPath string, watchdogUsec int64) *Notifier {
+func New(socketPath string, watchdogUsec int64, logger *log.Logger) *Notifier {
 	return &Notifier{
 		socketPath:   socketPath,
 		watchdogUsec: watchdogUsec,
+		logger:       logger,
 	}
 }
 
@@ -40,7 +42,11 @@ func (n *Notifier) Notify(state string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = conn.Close() }()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			n.logger.Printf("notify: close socket: %v", err)
+		}
+	}()
 	_, err = conn.Write([]byte(state))
 	return err
 }
@@ -60,7 +66,7 @@ func (n *Notifier) StartWatchdog() {
 		defer ticker.Stop()
 		for range ticker.C {
 			if err := n.Notify("WATCHDOG=1"); err != nil {
-				log.Printf("notify: watchdog: %v", err)
+				n.logger.Printf("notify: watchdog: %v", err)
 			}
 		}
 	}()
