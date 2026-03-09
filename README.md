@@ -91,6 +91,7 @@ Run `just --list` to see all available recipes.
 | `just install` | Full install: sync files + download mediamtx + register services |
 | `just start` | Start all services on the Pi |
 | `just stop` | Stop all services on the Pi |
+| `just restart` | Restart all services on the Pi |
 | `just status` | Show systemd status for all services |
 | `just logs` | Tail the FFmpeg log |
 | `just logs-http` | Tail the HTTP server log |
