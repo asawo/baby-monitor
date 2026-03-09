@@ -397,12 +397,19 @@ button .material-icons { font-size: 18px; }
 
 #stream-error.visible { opacity: 1; }
 
-#cry-alert {
+#alert-stack {
   position: absolute;
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(239, 68, 68, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+#cry-alert, #poop-alert, #fart-alert {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   color: #fff;
@@ -413,14 +420,19 @@ button .material-icons { font-size: 18px; }
   padding: 5px 14px;
   border-radius: 20px;
   white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
+  display: none;
 }
 
+#cry-alert { background: rgba(239, 68, 68, 0.88); }
+#poop-alert { background: rgba(120, 53, 15, 0.88); }
+#fart-alert { background: rgba(161, 98, 7, 0.80); font-weight: 600; }
+
 #cry-alert.visible {
-  opacity: 1;
+  display: block;
   animation: cry-pulse 1.2s ease-in-out infinite;
 }
+
+#poop-alert.visible, #fart-alert.visible { display: block; }
 
 @keyframes cry-pulse {
   0%, 100% { opacity: 1; }

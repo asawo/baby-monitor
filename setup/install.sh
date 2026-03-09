@@ -5,6 +5,7 @@ INSTALL_DIR="${HOME}/monitor"
 MEDIAMTX_VERSION=v1.16.3
 MEDIAMTX_URL="https://github.com/bluenviron/mediamtx/releases/download/${MEDIAMTX_VERSION}/mediamtx_${MEDIAMTX_VERSION}_linux_arm64.tar.gz"
 YAMNET_URL="https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/latest/yamnet.tflite"
+YAMNET_CLASS_MAP_URL="https://raw.githubusercontent.com/tensorflow/models/master/research/audioset/yamnet/yamnet_class_map.csv"
 
 if [ ! -f "$INSTALL_DIR/mediamtx" ]; then
     echo "==> Downloading mediamtx ${MEDIAMTX_VERSION}..."
@@ -27,12 +28,20 @@ echo "==> Installing Python dependencies for cry detection..."
 "$INSTALL_DIR/venv/bin/pip" install --quiet -r "$INSTALL_DIR/services/detect/requirements.txt"
 
 if [ ! -f "$INSTALL_DIR/models/yamnet.tflite" ]; then
-    echo "==> Downloading YAMNet cry detection model..."
+    echo "==> Downloading YAMNet model..."
     mkdir -p "$INSTALL_DIR/models"
     wget -q -O "$INSTALL_DIR/models/yamnet.tflite" "$YAMNET_URL"
     echo "    YAMNet model installed to $INSTALL_DIR/models/yamnet.tflite"
 else
     echo "==> YAMNet model already present, skipping."
+fi
+
+if [ ! -f "$INSTALL_DIR/models/yamnet_class_map.csv" ]; then
+    echo "==> Downloading YAMNet class map..."
+    wget -q -O "$INSTALL_DIR/models/yamnet_class_map.csv" "$YAMNET_CLASS_MAP_URL"
+    echo "    Class map installed to $INSTALL_DIR/models/yamnet_class_map.csv"
+else
+    echo "==> YAMNet class map already present, skipping."
 fi
 
 echo "==> Installing systemd services..."

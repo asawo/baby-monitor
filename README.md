@@ -13,7 +13,7 @@ Four systemd services run on the Pi:
 | `stream` | FFmpeg captures video (v4l2) and audio (ALSA) and pushes an RTSP stream |
 | `mediamtx` | Receives the RTSP stream and re-publishes it over WebRTC (WHEP) |
 | `monitor-http` | Go HTTP server serves the web UI on port 80 |
-| `detect` | Python ML service classifies audio for baby cries and sends push notifications |
+| `detect` | Python ML service classifies audio for baby cries, farts, and poops; sends push notifications |
 
 Open `http://monitor.local` in a browser and the page connects directly to the WebRTC stream.
 
@@ -26,7 +26,8 @@ The SPA (`server/web/index.html`, `server/web/css/style.css`, TypeScript source 
 - **Mute / fullscreen** — overlay buttons on the video
 - **Connectivity status** — live indicator in the controls bar that polls `/api/status` every 10 seconds; clicking it opens a log modal that fetches recent service logs from `/api/logs`
 - **Cry alert** — banner overlay when a cry is detected within the last 10 seconds
-- **Notifications toggle** — enable/disable push notifications sent via ntfy.sh
+- **Poop / fart alerts** — banner overlays when a wet fart (poop) or dry fart is detected within the last 30 seconds; wet and dry are distinguished via spectral analysis of the audio window
+- **Notifications toggle** — enable/disable push notifications sent via ntfy.sh (cry and poop trigger notifications; dry farts are UI-only)
 
 ### Device stability
 
@@ -67,7 +68,7 @@ PI_IP=192.168.1.100  # Pi's LAN IP (used for WebRTC ICE candidates)
 just install
 ```
 
-This builds the Go binary, syncs all files to the Pi (including a generated `mediamtx.yml`), downloads mediamtx, installs the Python venv + YAMNet model for cry detection, installs the udev rules for stable device paths, and registers all four systemd services.
+This builds the Go binary, syncs all files to the Pi (including a generated `mediamtx.yml`), downloads mediamtx, installs the Python venv + YAMNet model for sound detection, installs the udev rules for stable device paths, and registers all four systemd services.
 
 **3. Start the monitor**
 
@@ -90,11 +91,12 @@ Run `just --list` to see all available recipes.
 | `just install` | Full install: sync files + download mediamtx + register services |
 | `just start` | Start all services on the Pi |
 | `just stop` | Stop all services on the Pi |
+| `just restart` | Restart all services on the Pi |
 | `just status` | Show systemd status for all services |
 | `just logs` | Tail the FFmpeg log |
 | `just logs-http` | Tail the HTTP server log |
-| `just logs-detect` | Tail the cry detection log |
-| `just test` | Run cry detection unit tests on the Pi |
+| `just logs-detect` | Tail the sound detection log |
+| `just test` | Run sound detection unit tests on the Pi |
 
 ## Hardware tested on
 
