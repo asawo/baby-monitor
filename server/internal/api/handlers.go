@@ -102,7 +102,7 @@ func tailFile(path string, n int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only file; close error is non-actionable
 
 	fi, err := f.Stat()
 	if err != nil {
