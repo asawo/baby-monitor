@@ -11,16 +11,20 @@ Raspberry Pi baby monitor that streams webcam/microphone via RTSP → WebRTC to 
 Requires [`just`](https://github.com/casey/just) and a configured `.env` file (copy from `.env.example`).
 
 ```sh
-just build    # Cross-compile Go server for Linux ARM64
-just deploy   # Build + rsync + restart HTTP service on Pi
-just install  # Full setup: sync files, download mediamtx, register systemd services
-just start    # Start all services on Pi
-just stop     # Stop all services
-just status   # Show systemd status for all three services
-just logs     # Tail FFmpeg stream log
-just logs-http # Tail HTTP server log
-just setup    # Generate mediamtx.yml from template (substitutes PI_IP)
-just sync     # Rsync source files to Pi (without binary)
+just build       # Cross-compile Go server for Linux ARM64 (runs gen + tsc first)
+just deploy      # Build + rsync + restart HTTP service on Pi
+just install     # Full setup: sync files, download mediamtx, register systemd services
+just start       # Start all services on Pi
+just stop        # Stop all services
+just restart     # Restart all services on Pi
+just status      # Show systemd status for all four services
+just logs        # Tail FFmpeg stream log
+just logs-http   # Tail HTTP server log
+just logs-detect # Tail sound detection log
+just setup       # Generate mediamtx.yml from template (substitutes PI_IP)
+just sync        # Rsync source files to Pi (without binary)
+just gen         # Generate JS/TS types from Go API structs (via tygo)
+just test        # Run cry detection unit tests on the Pi
 ```
 
 No build/lint/test tooling beyond `go build` — the Go server is minimal stdlib-only.
