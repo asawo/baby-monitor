@@ -26,7 +26,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: v2.1.6
       - name: Cross-compile linux/arm64
         run: GOOS=linux GOARCH=arm64 go build -o bin/monitor ./server/cmd/
       - name: Upload binary artifact
