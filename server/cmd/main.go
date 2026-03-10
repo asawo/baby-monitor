@@ -37,13 +37,7 @@ func main() {
 	ntfy := notify.New(cfg.NotifySocket, cfg.WatchdogUsec, logger)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte(`{"status":"ok"}`)); err != nil {
-			logger.Printf("healthz write: %v", err)
-		}
-	})
-	mux.HandleFunc("GET /api/status", h.StatusHandler)
+	mux.HandleFunc("GET /api/status", h.GetStatusHandler)
 	mux.HandleFunc("GET /api/logs", h.LogsHandler)
 	mux.HandleFunc("GET /api/notifications", h.GetNotificationsHandler)
 	mux.HandleFunc("POST /api/notifications", h.ToggleNotificationsHandler)
@@ -53,7 +47,7 @@ func main() {
 	mux.HandleFunc("POST /api/fart", h.RecordFartHandler)
 	mux.HandleFunc("GET /api/detect-status", h.GetDetectStatusHandler)
 	mux.HandleFunc("POST /api/detect-status", h.SetDetectStatusHandler)
-	mux.HandleFunc("GET /api/events", h.EventsHandler)
+	mux.HandleFunc("GET /api/events", h.GetEventsHandler)
 	mux.Handle("/", middleware.NoCache(http.FileServer(http.Dir("./server/web"))))
 
 	addr := ":80"

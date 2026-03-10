@@ -37,9 +37,9 @@ func New(s *state.State, l *log.Logger) *Handler {
 	return &Handler{state: s, logger: l}
 }
 
-// StatusHandler returns the systemd active state of each monitored service.
+// GetStatusHandler returns the systemd active state of each monitored service.
 // Checks run in parallel to minimise latency.
-func (h *Handler) StatusHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetStatusHandler(w http.ResponseWriter, r *http.Request) {
 	result := make([]ServiceStatus, len(services))
 	var wg sync.WaitGroup
 	for i, svc := range services {
@@ -221,8 +221,8 @@ func (h *Handler) RecordFartHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// EventsHandler returns the audit log of recent detection events.
-func (h *Handler) EventsHandler(w http.ResponseWriter, r *http.Request) {
+// GetEventsHandler returns the audit log of recent detection events.
+func (h *Handler) GetEventsHandler(w http.ResponseWriter, r *http.Request) {
 	events, err := h.state.GetAuditLog()
 	if err != nil {
 		h.logger.Printf("api: events: %v", err)

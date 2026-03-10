@@ -4,9 +4,9 @@
 // source: handlers.go
 
 /**
- * Handlers holds shared dependencies for all API handlers.
+ * Handler holds shared dependencies for all API handlers.
  */
-export interface Handlers {
+export interface Handler {
 }
 
 //////////
