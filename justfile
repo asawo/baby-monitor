@@ -7,11 +7,15 @@ PI_HOST := env_var_or_default("PI_HOST", "monitor.local")
 PI      := PI_USER + "@" + PI_HOST
 REMOTE  := "/home/" + PI_USER + "/monitor"
 # Pi's LAN IP — used to populate WebRTC ICE candidates in mediamtx.yml
-PI_IP   := env_var_or_default("PI_IP", "192.168.1.100")
+PI_IP      := env_var_or_default("PI_IP", "192.168.1.100")
+# Baby's name shown in the web UI heading and page title
+BABY_NAME  := env_var_or_default("BABY_NAME", "Baby")
 
 # Generate mediamtx.yml from the example template, substituting PI_IP
+# Also generate server/web/config.js with the baby name
 setup:
     @sed 's/YOUR_PI_IP/{{PI_IP}}/' config/mediamtx.yml.example > mediamtx.yml
+    @echo 'window.BABY_NAME = "{{BABY_NAME}}";' > server/web/config.js
 
 # Generate JS/TS types from Go API structs
 gen:

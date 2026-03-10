@@ -1,6 +1,7 @@
 bin
 .env
 mediamtx.yml
+server/web/config.js
 TODO.md
 venv
 models
