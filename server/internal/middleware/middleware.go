@@ -1,13 +1,14 @@
-package main
+// Package middleware provides HTTP middleware for the monitor server.
+package middleware
 
 import (
 	"net/http"
 	"strings"
 )
 
-// privateNetworkMiddleware handles the Private Network Access preflight handshake required
+// PrivateNetwork handles the Private Network Access preflight handshake required
 // by Chrome when a public page (or localhost) makes requests to a device on the local network.
-func privateNetworkMiddleware(next http.Handler) http.Handler {
+func PrivateNetwork(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Access-Control-Request-Private-Network") == "true" {
 			w.Header().Set("Access-Control-Allow-Private-Network", "true")
@@ -22,9 +23,9 @@ func privateNetworkMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// noCacheMiddleware sets Cache-Control: no-cache on JS and CSS responses so browsers
+// NoCache sets Cache-Control: no-cache on JS and CSS responses so browsers
 // revalidate static assets on each page load, picking up new deployments without a hard refresh.
-func noCacheMiddleware(next http.Handler) http.Handler {
+func NoCache(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, ".js") || strings.HasSuffix(r.URL.Path, ".css") {
 			w.Header().Set("Cache-Control", "no-cache")

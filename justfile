@@ -27,6 +27,7 @@ build: gen
 sync: setup
     rsync -av \
         --exclude bin/ \
+        --exclude cmd \
         --exclude mediamtx \
         --exclude node_modules/ \
         --exclude .git/ \
