@@ -1,7 +1,8 @@
 # Baby Monitor
 
-A self-hosted baby monitor that streams live video and audio from a Raspberry Pi to any browser on your local network using WebRTC.
+<img width="594" height="461" alt="baby" src="https://github.com/user-attachments/assets/37410390-07d4-4b98-b7a8-063b354e5a57" />
 
+A self-hosted baby monitor that streams live video and audio from a Raspberry Pi to any browser on your local network using WebRTC.
 The webcam I'm using is `Logicool Web Camera C270nd HD 720P`.
 
 ## Overview
