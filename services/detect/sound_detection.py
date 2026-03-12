@@ -9,9 +9,9 @@ farts by co-activation of liquid-related YAMNet classes in the same window.
 Environment variables:
   NTFY_TOPIC        (required) Unique ntfy.sh topic
   NTFY_URL          (default: https://ntfy.sh) ntfy server base URL
-  CRY_THRESHOLD     (default: 0.3) Cry confidence score threshold (0.0–1.0)
+  CRY_THRESHOLD     (default: 0.6) Cry confidence score threshold (0.0–1.0)
   CRY_COOLDOWN      (default: 120) Minimum seconds between cry notifications
-  FART_THRESHOLD    (default: 0.3) Fart confidence score threshold (0.0–1.0)
+  FART_THRESHOLD    (default: 0.6) Fart confidence score threshold (0.0–1.0)
   FART_COOLDOWN     (default: 120) Minimum seconds between fart notifications
   WETNESS_THRESHOLD (default: 0.4)  Min high-frequency energy ratio (above WETNESS_HF_CUTOFF) to classify as poop
   WETNESS_HF_CUTOFF (default: 1000) Frequency cutoff in Hz separating dry (low) from wet (high) fart energy
@@ -41,9 +41,9 @@ def log(*args, **kwargs):
 # ---------------------------------------------------------------------------
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 NTFY_URL = os.environ.get("NTFY_URL", "https://ntfy.sh").rstrip("/")
-CRY_THRESHOLD = float(os.environ.get("CRY_THRESHOLD", "0.3"))
+CRY_THRESHOLD = float(os.environ.get("CRY_THRESHOLD", "0.6"))
 CRY_COOLDOWN = int(os.environ.get("CRY_COOLDOWN", "120"))
-FART_THRESHOLD = float(os.environ.get("FART_THRESHOLD", "0.3"))
+FART_THRESHOLD = float(os.environ.get("FART_THRESHOLD", "0.6"))
 FART_COOLDOWN = int(os.environ.get("FART_COOLDOWN", "120"))
 WETNESS_THRESHOLD = float(os.environ.get("WETNESS_THRESHOLD", "0.5"))
 WETNESS_HF_CUTOFF = float(os.environ.get("WETNESS_HF_CUTOFF", "1000"))
@@ -304,14 +304,17 @@ def main():
                     log("Top scores: " + ", ".join(f"{_class_label(class_names, i)}={scores[i]:.3f}" for i in top5))
 
                 cry_score = float(scores[BABY_CRY_CLASS])
-                if cry_score >= CRY_THRESHOLD:
+                cry_detected = cry_score >= CRY_THRESHOLD
+                if cry_detected:
                     log(f"Cry detected! Score: {cry_score:.3f}")
                     report_cry(cry_score)
                     notify_cry(f"Crying detected (confidence: {cry_score:.0%})")
 
                 fart_score = float(scores[FART_CLASS])
                 if fart_score >= FART_THRESHOLD:
-                    wet_score = compute_wetness(window)
+                    # Skip wetness when crying: cry's high-frequency energy falsely
+                    # passes the wetness check, causing spurious poop alerts.
+                    wet_score = compute_wetness(window) if not cry_detected else 0.0
                     is_wet = wet_score >= WETNESS_THRESHOLD
                     kind = "Wet fart (poop)" if is_wet else "Dry fart"
                     log(f"{kind} detected! Fart: {fart_score:.3f}, Wet score: {wet_score:.3f}")
