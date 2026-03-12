@@ -40,9 +40,9 @@ Push notifications are sent via [ntfy.sh](https://ntfy.sh) (requires `NTFY_TOPIC
 |---|---|---|
 | `NTFY_TOPIC` | *(required)* | ntfy.sh topic for push notifications |
 | `NTFY_URL` | `https://ntfy.sh` | ntfy server base URL (override for self-hosted) |
-| `CRY_THRESHOLD` | `0.3` | YAMNet score threshold for cry detection (0.0–1.0) |
+| `CRY_THRESHOLD` | `0.6` | YAMNet score threshold for cry detection (0.0–1.0) |
 | `CRY_COOLDOWN` | `120` | Minimum seconds between cry notifications |
-| `FART_THRESHOLD` | `0.3` | YAMNet score threshold for fart detection (0.0–1.0) |
+| `FART_THRESHOLD` | `0.6` | YAMNet score threshold for fart detection (0.0–1.0) |
 | `FART_COOLDOWN` | `120` | Minimum seconds between fart/poop notifications |
 | `WETNESS_THRESHOLD` | `0.5` | Peak HF energy ratio above which a fart is classified as wet |
 | `WETNESS_HF_CUTOFF` | `1000` | Frequency cutoff in Hz separating dry (low) from wet (high) energy |
